@@ -250,6 +250,19 @@ app.post('/api/missions/verify-channel', async (req, res) => {
         if (missionId === 2) {
             console.log(`🔍 Verifying channel membership for user ${userId}`);
             
+            // Ensure user exists before creating mission record
+            let user = await db.getUser(userId);
+            if (!user) {
+                console.log(`👤 Creating user ${userId} for channel verification`);
+                user = await db.createUser({
+                    user_id: userId,
+                    username: 'unknown',
+                    first_name: 'User',
+                    last_name: '',
+                    balance: 0
+                });
+            }
+            
             try {
                 // Only try API verification if bot is connected
                 if (bot.telegram) {
@@ -491,10 +504,15 @@ function getUserIdFromRequest(req) {
         }
     }
     
-    // Fallback for development - use query param or default
-    const fallback = req.query.userId || req.body.userId || 12345;
-    console.log('🔄 Using fallback user_id:', fallback);
-    return fallback;
+    // Fallback for development - use query param or reject if no real user
+    const fallback = req.query.userId || req.body.userId;
+    if (fallback) {
+        console.log('🔄 Using fallback user_id from query/body:', fallback);
+        return parseInt(fallback);
+    }
+    
+    console.log('❌ No valid user ID found');
+    return null;
 }
 
 // Helper function to get level from balance
