@@ -25,27 +25,54 @@ class SpudVerse {
     }
 
     async init() {
-        console.log('🥔 Initializing SpudVerse...');
-        
-        // Initialize Telegram WebApp
-        this.initTelegram();
-        
-        // Show loading screen
-        await this.showLoading();
-        
-        // Load user data
-        await this.loadUserData();
-        
-        // Setup event listeners
-        this.setupEventListeners();
-        
-        // Start energy regeneration
-        this.startEnergyRegen();
-        
-        // Hide loading and show game
-        this.hideLoading();
-        
-        console.log('🚀 SpudVerse ready!');
+        try {
+            console.log('🥔 Initializing SpudVerse...');
+            
+            // Initialize Telegram WebApp
+            this.initTelegram();
+            
+            // Show loading screen
+            await this.showLoading();
+            
+            // Load user data
+            await this.loadUserData();
+            
+            // Setup event listeners
+            this.setupEventListeners();
+            
+            // Start energy regeneration
+            this.startEnergyRegen();
+            
+            // Hide loading and show game
+            this.hideLoading();
+            
+            console.log('🚀 SpudVerse ready!');
+        } catch (error) {
+            console.error('💥 SpudVerse initialization failed:', error);
+            
+            // Show error to user
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.innerHTML = `
+                    <div class="potato-loader">
+                        <div class="potato-bounce">😵</div>
+                        <div class="loading-text">Oops! Something went wrong</div>
+                        <div class="loading-subtitle">Please refresh the page 🔄</div>
+                        <button onclick="window.location.reload()" style="
+                            margin-top: 20px;
+                            padding: 10px 20px;
+                            background: #ff6b35;
+                            color: white;
+                            border: none;
+                            border-radius: 10px;
+                            cursor: pointer;
+                            font-family: 'Comic Neue', cursive;
+                            font-weight: 600;
+                        ">🔄 Reload Game</button>
+                    </div>
+                `;
+            }
+        }
     }
 
     initTelegram() {
@@ -87,15 +114,19 @@ class SpudVerse {
             
             let index = 0;
             const interval = setInterval(() => {
-                document.querySelector('.loading-subtitle').textContent = 
-                    loadingTexts[index] + ' 🌱';
+                const subtitle = document.querySelector('.loading-subtitle');
+                if (subtitle) {
+                    subtitle.textContent = loadingTexts[index] + ' 🌱';
+                }
                 index = (index + 1) % loadingTexts.length;
             }, 500);
             
+            // Reduced loading time to 2 seconds
             setTimeout(() => {
                 clearInterval(interval);
+                console.log('⏰ Loading completed');
                 resolve();
-            }, 3000);
+            }, 2000);
         });
     }
 
@@ -113,22 +144,46 @@ class SpudVerse {
 
     async loadUserData() {
         try {
-            // In a real app, this would fetch from your backend API
+            console.log('🔄 Loading user data...');
+            
+            // Try to fetch from backend API
             const response = await this.apiCall('/api/user', 'GET');
             
-            if (response.success) {
+            if (response && response.success) {
+                console.log('✅ API data loaded:', response.data);
                 this.gameData = { ...this.gameData, ...response.data };
+            } else {
+                console.log('⚠️ API failed, using mock data');
+                this.useMockData();
             }
         } catch (error) {
-            console.log('📡 Using local data');
-            // Use local storage for development
-            const savedData = localStorage.getItem('spudverse_data');
-            if (savedData) {
-                this.gameData = { ...this.gameData, ...JSON.parse(savedData) };
-            }
+            console.log('📡 API error, using local/mock data:', error.message);
+            this.useMockData();
         }
         
         this.updateUI();
+    }
+
+    useMockData() {
+        // Use mock data when API fails
+        const savedData = localStorage.getItem('spudverse_data');
+        if (savedData) {
+            this.gameData = { ...this.gameData, ...JSON.parse(savedData) };
+        } else {
+            // Default mock data
+            this.gameData = {
+                ...this.gameData,
+                balance: 0,
+                energy: 100,
+                maxEnergy: 100,
+                perTap: 1,
+                streak: 0,
+                combo: 1,
+                totalFarmed: 0,
+                referrals: 0
+            };
+        }
+        console.log('📦 Using mock data:', this.gameData);
     }
 
     setupEventListeners() {
@@ -736,30 +791,132 @@ class SpudVerse {
     }
 
     async apiCall(endpoint, method = 'GET', data = null) {
-        const baseUrl = window.location.origin;
-        const url = baseUrl + endpoint;
-        
-        const options = {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
+        try {
+            const baseUrl = window.location.origin;
+            const url = baseUrl + endpoint;
+            
+            console.log(`🌐 API Call: ${method} ${url}`);
+            
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // Add timeout
+                signal: AbortSignal.timeout(5000) // 5 second timeout
+            };
+
+            if (this.tg && this.tg.initData) {
+                options.headers['Authorization'] = `tma ${this.tg.initData}`;
             }
-        };
 
-        if (this.tg && this.tg.initData) {
-            options.headers['Authorization'] = `tma ${this.tg.initData}`;
+            if (data && method !== 'GET') {
+                options.body = JSON.stringify(data);
+            }
+
+            const response = await fetch(url, options);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log(`✅ API Response:`, result);
+            return result;
+        } catch (error) {
+            console.error(`❌ API Error for ${endpoint}:`, error.message);
+            // Return mock success for development
+            if (endpoint === '/api/user') {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+            throw error;
         }
-
-        if (data && method !== 'GET') {
-            options.body = JSON.stringify(data);
-        }
-
-        const response = await fetch(url, options);
-        return await response.json();
     }
 }
 
+// Global error handler
+window.addEventListener('error', (event) => {
+    console.error('🚨 Global JavaScript Error:', event.error);
+    
+    // Show user-friendly error
+    const errorMsg = document.createElement('div');
+    errorMsg.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        background: #ff4757;
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        z-index: 10000;
+        text-align: center;
+        font-family: 'Comic Neue', cursive;
+    `;
+    errorMsg.innerHTML = `
+        <div>😵 Game Error!</div>
+        <small>Check console for details</small>
+        <button onclick="this.parentElement.remove()" style="
+            margin-left: 10px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        ">✕</button>
+    `;
+    document.body.appendChild(errorMsg);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (errorMsg.parentElement) {
+            errorMsg.remove();
+        }
+    }, 5000);
+});
+
 // Initialize the game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    window.spudverse = new SpudVerse();
+    try {
+        console.log('🎮 Starting SpudVerse...');
+        window.spudverse = new SpudVerse();
+    } catch (error) {
+        console.error('💥 Failed to start SpudVerse:', error);
+        
+        // Show fallback UI
+        document.body.innerHTML = `
+            <div style="
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                font-family: 'Comic Neue', cursive;
+                text-align: center;
+                padding: 20px;
+            ">
+                <div style="font-size: 4rem; margin-bottom: 20px;">😵</div>
+                <h2>SpudVerse Failed to Load</h2>
+                <p>There was an error starting the game.</p>
+                <button onclick="window.location.reload()" style="
+                    margin-top: 20px;
+                    padding: 15px 30px;
+                    background: #ff6b35;
+                    color: white;
+                    border: none;
+                    border-radius: 15px;
+                    cursor: pointer;
+                    font-family: 'Comic Neue', cursive;
+                    font-weight: 600;
+                    font-size: 1rem;
+                ">🔄 Reload Game</button>
+            </div>
+        `;
+    }
 });
