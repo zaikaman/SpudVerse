@@ -107,9 +107,19 @@ class SpudVerse {
             
             // Get user data
             this.user = this.tg.initDataUnsafe?.user;
+            
+            // Extract referral ID from start_param
+            this.referrerId = this.tg.initDataUnsafe?.start_param || null;
+            
             console.log('👤 User:', this.user);
+            console.log('🔗 Referral ID:', this.referrerId);
         } else {
             console.log('🔧 Running in development mode');
+            
+            // Check URL for referral parameter (for development/testing)
+            const urlParams = new URLSearchParams(window.location.search);
+            this.referrerId = urlParams.get('ref') || urlParams.get('referrerId');
+            
             // Mock user for development
             this.user = {
                 id: 12345,
@@ -117,6 +127,8 @@ class SpudVerse {
                 last_name: 'Farmer',
                 username: 'potato_master'
             };
+            
+            console.log('🔧 Development mode - Referral ID from URL:', this.referrerId);
         }
     }
 
@@ -1468,7 +1480,7 @@ class SpudVerse {
     async apiCall(endpoint, method = 'GET', data = null) {
         try {
             const baseUrl = window.location.origin;
-            const url = baseUrl + endpoint;
+            let url = baseUrl + endpoint;
             
             console.log(`🌐 API Call: ${method} ${url}`);
             
@@ -1481,11 +1493,28 @@ class SpudVerse {
                 signal: AbortSignal.timeout(5000) // 5 second timeout
             };
 
+            // Add authorization header with Telegram data
             if (this.tg && this.tg.initData) {
                 options.headers['Authorization'] = `tma ${this.tg.initData}`;
+            } else {
+                // Fallback for development - add referral data as query params
+                if (method === 'GET' && this.referrerId) {
+                    const separator = url.includes('?') ? '&' : '?';
+                    url += `${separator}referrerId=${this.referrerId}`;
+                }
+                
+                // Add user info for development
+                if (this.user) {
+                    const separator = url.includes('?') ? '&' : '?';
+                    url += `${separator}userId=${this.user.id}&username=${this.user.username || ''}&firstName=${this.user.first_name || ''}&lastName=${this.user.last_name || ''}`;
+                }
             }
 
             if (data && method !== 'GET') {
+                // Add referral data to POST requests if not using Telegram auth
+                if (!this.tg?.initData && this.referrerId) {
+                    data = { ...data, referrerId: this.referrerId };
+                }
                 options.body = JSON.stringify(data);
             }
 

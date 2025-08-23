@@ -121,13 +121,56 @@ bot.use(async (ctx, next) => {
 // API Routes for Mini App
 app.get('/api/user', async (req, res) => {
     try {
-        // Extract user ID from Telegram Mini App data
-        const userId = getUserIdFromRequest(req);
-        if (!userId) {
+        // Extract user ID and user data from Telegram Mini App data
+        const userInfo = getUserInfoFromRequest(req);
+        if (!userInfo || !userInfo.userId) {
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
-        const user = await db.getUser(userId);
+        const { userId, username, firstName, lastName, referrerId } = userInfo;
+        console.log('👤 API User request:', { userId, username, firstName, lastName, referrerId });
+
+        let user = await db.getUser(userId);
+        
+        // Auto-create user if doesn't exist (when clicking Play button)
+        if (!user) {
+            console.log('🆕 Creating new user via Mini App:', userId);
+            
+            await db.createUser(
+                userId,
+                username || `user${userId}`,
+                firstName || 'User',
+                lastName || '',
+                referrerId
+            );
+            
+            // Process referral bonus if there's a referrer
+            if (referrerId && referrerId !== userId) {
+                console.log('🎁 Processing referral bonus:', { referrerId, userId });
+                
+                await db.addReferral(referrerId, userId);
+                await db.updateUserBalance(referrerId, parseInt(process.env.REFERRAL_BONUS) || 100);
+                await db.updateUserBalance(userId, 50); // Bonus for invited user
+                
+                // Try to send notification to referrer (via bot if available)
+                try {
+                    if (bot.telegram) {
+                        await bot.telegram.sendMessage(referrerId, 
+                            `${EMOJIS.tada} You just earned ${process.env.REFERRAL_BONUS || 100} SPUD from inviting a friend! ${EMOJIS.money}`
+                        );
+                    }
+                } catch (err) {
+                    console.log('Cannot send referral notification:', err.message);
+                }
+            }
+            
+            // Create welcome mission for new user
+            await db.updateUserMission(userId, 1, true, false); // Mission ID 1 = welcome
+            
+            // Refresh user data after creation
+            user = await db.getUser(userId);
+        }
+
         const referralCount = await db.getReferralCount(userId);
         const energyData = await db.getUserEnergy(userId);
         
@@ -857,6 +900,68 @@ function getUserIdFromRequest(req) {
     }
     
     console.log('❌ No valid user ID found');
+    return null;
+}
+
+// Enhanced helper function to extract user info including referral data from Telegram Mini App request
+function getUserInfoFromRequest(req) {
+    const auth = req.headers.authorization;
+    console.log('🔍 Auth header for user info:', auth ? 'Present' : 'Missing');
+    
+    if (auth && auth.startsWith('tma ')) {
+        try {
+            const initData = auth.slice(4);
+            const params = new URLSearchParams(initData);
+            
+            // Extract user data
+            const userStr = params.get('user');
+            const startParam = params.get('start_param');
+            
+            console.log('📊 Telegram Mini App data:', {
+                userFound: !!userStr,
+                startParam: startParam || 'None'
+            });
+            
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                
+                // Parse referral ID from start_param
+                const referrerId = startParam ? parseReferralCode(startParam) : null;
+                
+                const userInfo = {
+                    userId: user.id,
+                    username: user.username || null,
+                    firstName: user.first_name || 'User',
+                    lastName: user.last_name || '',
+                    referrerId: referrerId
+                };
+                
+                console.log('✅ Parsed user info:', userInfo);
+                return userInfo;
+            }
+        } catch (error) {
+            console.error('❌ Error parsing Telegram Mini App data:', error);
+        }
+    }
+    
+    // Fallback for development
+    const fallbackUserId = req.query.userId || req.body.userId;
+    const fallbackReferrerId = req.query.referrerId || req.body.referrerId;
+    
+    if (fallbackUserId) {
+        const userInfo = {
+            userId: parseInt(fallbackUserId),
+            username: req.query.username || `user${fallbackUserId}`,
+            firstName: req.query.firstName || 'User',
+            lastName: req.query.lastName || '',
+            referrerId: fallbackReferrerId ? parseInt(fallbackReferrerId) : null
+        };
+        
+        console.log('🔄 Using fallback user info:', userInfo);
+        return userInfo;
+    }
+    
+    console.log('❌ No valid user info found');
     return null;
 }
 
