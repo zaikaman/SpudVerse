@@ -27,11 +27,14 @@ const app = express();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 // Choose database based on environment variables
+console.log('🔍 Debug - SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
+console.log('🔍 Debug - SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
+
 const db = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY 
     ? new SupabaseDatabase() 
     : new Database();
 
-console.log(`📊 Database: ${process.env.SUPABASE_URL ? 'Supabase' : 'SQLite'}`);
+console.log(`📊 Database: ${process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY ? 'Supabase' : 'SQLite'}`);
 
 // Middleware
 app.use(express.json());
@@ -250,23 +253,32 @@ function getUserIdFromRequest(req) {
     // In a real implementation, you would validate the Telegram Mini App init data
     // For now, we'll use a simple approach
     const auth = req.headers.authorization;
+    console.log('🔍 Auth header:', auth ? 'Present' : 'Missing');
+    
     if (auth && auth.startsWith('tma ')) {
         // Parse Telegram Mini App data
         try {
             const initData = auth.slice(4);
+            console.log('📊 Init data length:', initData.length);
+            
             const params = new URLSearchParams(initData);
             const userStr = params.get('user');
+            console.log('👤 User string:', userStr ? 'Found' : 'Missing');
+            
             if (userStr) {
                 const user = JSON.parse(userStr);
+                console.log('✅ Parsed user ID:', user.id);
                 return user.id;
             }
         } catch (error) {
-            console.error('Error parsing Telegram data:', error);
+            console.error('❌ Error parsing Telegram data:', error);
         }
     }
     
     // Fallback for development - use query param or default
-    return req.query.userId || req.body.userId || 12345;
+    const fallback = req.query.userId || req.body.userId || 12345;
+    console.log('🔄 Using fallback user_id:', fallback);
+    return fallback;
 }
 
 // Helper function to get level from balance
