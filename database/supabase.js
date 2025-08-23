@@ -78,19 +78,12 @@ class SupabaseDatabase {
         if (!this.client) return false;
         
         try {
-            // Get current balance first
-            const user = await this.getUser(userId);
-            if (!user) return false;
-            
-            const newBalance = user.balance + amount;
-            
-            const { error } = await this.client
-                .from('users')
-                .update({ 
-                    balance: newBalance,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_id', userId);
+            // Use atomic increment to avoid race conditions
+            const { data, error } = await this.client
+                .rpc('increment_user_balance', {
+                    user_id: userId,
+                    amount: amount
+                });
                 
             if (error) {
                 console.error('Supabase updateUserBalance error:', error);

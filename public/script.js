@@ -21,6 +21,11 @@ class SpudVerse {
         this.lastTapTime = 0;
         this.energyRegenInterval = null;
         
+        // Batch tap processing
+        this.pendingTaps = 0;
+        this.lastSyncTime = Date.now();
+        this.syncInterval = 2000; // Sync every 2 seconds
+        
         this.init();
     }
 
@@ -301,8 +306,9 @@ class SpudVerse {
         // Save progress
         this.saveProgress();
 
-        // Send tap to backend
-        this.apiCall('/api/tap', 'POST', { amount: earnedSpud });
+        // Add to pending taps for batch processing
+        this.pendingTaps += earnedSpud;
+        this.scheduleTapSync();
     }
 
     createTapEffect(event, amount) {
@@ -686,6 +692,50 @@ class SpudVerse {
                 this.showAchievementUnlocked(achievement);
             }
         });
+    }
+
+    scheduleTapSync() {
+        const now = Date.now();
+        
+        // If we have pending taps and enough time has passed, sync immediately
+        if (this.pendingTaps > 0 && (now - this.lastSyncTime) >= this.syncInterval) {
+            this.syncTapsToBackend();
+        }
+        // Otherwise, schedule a sync if not already scheduled
+        else if (this.pendingTaps > 0 && !this.syncTimeout) {
+            const timeToWait = this.syncInterval - (now - this.lastSyncTime);
+            this.syncTimeout = setTimeout(() => {
+                this.syncTapsToBackend();
+            }, Math.max(100, timeToWait));
+        }
+    }
+
+    async syncTapsToBackend() {
+        if (this.pendingTaps <= 0) return;
+        
+        const amount = this.pendingTaps;
+        this.pendingTaps = 0;
+        this.lastSyncTime = Date.now();
+        
+        if (this.syncTimeout) {
+            clearTimeout(this.syncTimeout);
+            this.syncTimeout = null;
+        }
+        
+        console.log(`🔄 Syncing ${amount} SPUD to backend...`);
+        
+        try {
+            const response = await this.apiCall('/api/tap', 'POST', { amount: amount });
+            if (response && response.success) {
+                console.log('✅ Sync successful, server balance:', response.data.balance);
+            } else {
+                console.warn('⚠️ Sync failed, adding back to pending');
+                this.pendingTaps += amount; // Add back if failed
+            }
+        } catch (error) {
+            console.error('❌ Sync error:', error);
+            this.pendingTaps += amount; // Add back if failed
+        }
     }
 
     showAchievementUnlocked(achievement) {
