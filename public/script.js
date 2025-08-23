@@ -728,6 +728,24 @@ class SpudVerse {
             const response = await this.apiCall('/api/tap', 'POST', { amount: amount });
             if (response && response.success) {
                 console.log('✅ Sync successful, server balance:', response.data.balance);
+                
+                // Handle new achievements
+                if (response.data.newAchievements && response.data.newAchievements.length > 0) {
+                    for (const achievement of response.data.newAchievements) {
+                        this.showAchievementUnlocked(achievement);
+                        
+                        // Award achievement reward
+                        if (achievement.reward > 0) {
+                            this.gameData.balance += achievement.reward;
+                            this.updateBalance();
+                            this.showToast(`🎁 Achievement reward: +${achievement.reward} SPUD!`, 'success');
+                        }
+                    }
+                }
+                
+                // Update balance from server
+                this.gameData.balance = response.data.balance;
+                this.updateBalance();
             } else {
                 console.warn('⚠️ Sync failed, adding back to pending');
                 this.pendingTaps += amount; // Add back if failed

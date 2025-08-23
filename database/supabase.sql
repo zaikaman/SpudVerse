@@ -50,11 +50,37 @@ CREATE TABLE IF NOT EXISTS user_missions (
     UNIQUE(user_id, mission_id)
 );
 
+-- Create achievements table
+CREATE TABLE IF NOT EXISTS achievements (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    threshold INTEGER NOT NULL,
+    type TEXT DEFAULT 'balance',
+    icon TEXT DEFAULT '🏆',
+    reward INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create user_achievements table
+CREATE TABLE IF NOT EXISTS user_achievements (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(user_id),
+    achievement_id INTEGER REFERENCES achievements(id),
+    unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    claimed BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, achievement_id)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_balance ON users(balance DESC);
 CREATE INDEX IF NOT EXISTS idx_users_created ON users(created_at);
 CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id);
 CREATE INDEX IF NOT EXISTS idx_user_missions_user ON user_missions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_achievements_user ON user_achievements(user_id);
+CREATE INDEX IF NOT EXISTS idx_achievements_type ON achievements(type);
 
 -- Insert default missions
 INSERT INTO missions (title, description, reward, type, requirements) VALUES
@@ -66,16 +92,31 @@ INSERT INTO missions (title, description, reward, type, requirements) VALUES
 ('💎 Reach 1K SPUD', 'Accumulate 1000 SPUD coins', 150, 'achievement', '{"action": "reach_balance", "amount": 1000}')
 ON CONFLICT DO NOTHING;
 
+-- Insert default achievements
+INSERT INTO achievements (title, description, threshold, type, icon, reward) VALUES
+('🏁 First Steps', 'Earned your first SPUD!', 1, 'balance', '🏁', 10),
+('💯 Century Club', 'Earned 100 SPUD coins!', 100, 'balance', '💯', 50),
+('🔥 Thousand Club', 'Earned 1,000 SPUD coins!', 1000, 'balance', '🔥', 100),
+('💎 Ten Thousand Legend', 'Earned 10,000 SPUD coins!', 10000, 'balance', '💎', 500),
+('👥 Social Butterfly', 'Invited 5 friends', 5, 'referrals', '👥', 200),
+('🏆 Mission Master', 'Completed 10 missions', 10, 'missions', '🏆', 300),
+('⚡ Tap Master', 'Made 1000 taps', 1000, 'taps', '⚡', 150),
+('🌟 Elite Farmer', 'Reached top 10 leaderboard', 10, 'rank', '🌟', 1000)
+ON CONFLICT DO NOTHING;
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_missions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies (allow all for now, can be restricted later)
 CREATE POLICY "Allow all operations on users" ON users FOR ALL USING (true);
 CREATE POLICY "Allow all operations on referrals" ON referrals FOR ALL USING (true);
 CREATE POLICY "Allow all operations on user_missions" ON user_missions FOR ALL USING (true);
+CREATE POLICY "Allow all operations on user_achievements" ON user_achievements FOR ALL USING (true);
 CREATE POLICY "Allow read on missions" ON missions FOR SELECT USING (true);
+CREATE POLICY "Allow read on achievements" ON achievements FOR SELECT USING (true);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()

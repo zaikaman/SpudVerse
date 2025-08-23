@@ -347,6 +347,139 @@ class SupabaseDatabase {
         }
     }
 
+    // Achievement methods
+    async getAchievements() {
+        if (!this.client) {
+            // Return mock achievements
+            return [
+                { id: 1, title: "🏁 First Steps", description: "Earned your first SPUD!", threshold: 1, type: "balance", icon: "🏁", reward: 10 },
+                { id: 2, title: "💯 Century Club", description: "Earned 100 SPUD coins!", threshold: 100, type: "balance", icon: "💯", reward: 50 },
+                { id: 3, title: "🔥 Thousand Club", description: "Earned 1,000 SPUD coins!", threshold: 1000, type: "balance", icon: "🔥", reward: 100 }
+            ];
+        }
+        
+        try {
+            const { data, error } = await this.client
+                .from('achievements')
+                .select('*')
+                .eq('is_active', true)
+                .order('threshold');
+                
+            if (error) {
+                console.error('Supabase getAchievements error:', error);
+                return [];
+            }
+            
+            return data || [];
+        } catch (error) {
+            console.error('getAchievements error:', error);
+            return [];
+        }
+    }
+
+    async getUserAchievements(userId) {
+        if (!this.client) return [];
+        
+        try {
+            const { data, error } = await this.client
+                .from('user_achievements')
+                .select(`
+                    *,
+                    achievements (*)
+                `)
+                .eq('user_id', userId);
+                
+            if (error) {
+                console.error('Supabase getUserAchievements error:', error);
+                return [];
+            }
+            
+            return data || [];
+        } catch (error) {
+            console.error('getUserAchievements error:', error);
+            return [];
+        }
+    }
+
+    async unlockAchievement(userId, achievementId) {
+        if (!this.client) return null;
+        
+        try {
+            const { data, error } = await this.client
+                .from('user_achievements')
+                .insert({
+                    user_id: userId,
+                    achievement_id: achievementId
+                })
+                .select(`
+                    *,
+                    achievements (*)
+                `)
+                .single();
+                
+            if (error) {
+                console.error('Supabase unlockAchievement error:', error);
+                return null;
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('unlockAchievement error:', error);
+            return null;
+        }
+    }
+
+    async checkAndUnlockAchievements(userId, userStats) {
+        if (!this.client) return [];
+        
+        try {
+            // Get all achievements
+            const achievements = await this.getAchievements();
+            
+            // Get user's current achievements
+            const userAchievements = await this.getUserAchievements(userId);
+            const unlockedIds = userAchievements.map(ua => ua.achievement_id);
+            
+            const newlyUnlocked = [];
+            
+            for (const achievement of achievements) {
+                if (unlockedIds.includes(achievement.id)) continue;
+                
+                let shouldUnlock = false;
+                
+                switch (achievement.type) {
+                    case 'balance':
+                        shouldUnlock = userStats.balance >= achievement.threshold;
+                        break;
+                    case 'referrals':
+                        shouldUnlock = userStats.referral_count >= achievement.threshold;
+                        break;
+                    case 'missions':
+                        shouldUnlock = userStats.completed_missions >= achievement.threshold;
+                        break;
+                    case 'rank':
+                        shouldUnlock = userStats.rank > 0 && userStats.rank <= achievement.threshold;
+                        break;
+                    case 'taps':
+                        // This would need to be tracked separately
+                        break;
+                }
+                
+                if (shouldUnlock) {
+                    const unlocked = await this.unlockAchievement(userId, achievement.id);
+                    if (unlocked) {
+                        newlyUnlocked.push(unlocked);
+                    }
+                }
+            }
+            
+            return newlyUnlocked;
+        } catch (error) {
+            console.error('checkAndUnlockAchievements error:', error);
+            return [];
+        }
+    }
+
     // Real-time subscription for leaderboard
     subscribeToLeaderboard(callback) {
         if (!this.client) return null;

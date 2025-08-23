@@ -139,12 +139,22 @@ app.post('/api/tap', async (req, res) => {
         await db.updateUserBalance(userId, amount || 1);
         await db.updateLastTapTime(userId, Date.now());
 
-        const user = await db.getUser(userId);
+        // Get updated user stats and check for achievements
+        const userStats = await db.getUserStats(userId);
+        const newAchievements = await db.checkAndUnlockAchievements(userId, userStats);
+
         res.json({
             success: true,
             data: {
-                newBalance: user.balance,
-                earned: amount || 1
+                balance: userStats.balance,
+                earned: amount || 1,
+                newAchievements: newAchievements.map(ua => ({
+                    id: ua.achievements.id,
+                    title: ua.achievements.title,
+                    description: ua.achievements.description,
+                    icon: ua.achievements.icon,
+                    reward: ua.achievements.reward
+                }))
             }
         });
     } catch (error) {
@@ -244,6 +254,37 @@ app.get('/api/leaderboard', async (req, res) => {
         });
     } catch (error) {
         console.error('Leaderboard API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// API endpoint to get achievements
+app.get('/api/achievements', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const [achievements, userAchievements] = await Promise.all([
+            db.getAchievements(),
+            db.getUserAchievements(userId)
+        ]);
+
+        const unlockedIds = userAchievements.map(ua => ua.achievement_id);
+
+        const achievementData = achievements.map(achievement => ({
+            ...achievement,
+            unlocked: unlockedIds.includes(achievement.id),
+            unlocked_at: userAchievements.find(ua => ua.achievement_id === achievement.id)?.unlocked_at
+        }));
+
+        res.json({
+            success: true,
+            data: achievementData
+        });
+    } catch (error) {
+        console.error('Achievements API Error:', error);
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
