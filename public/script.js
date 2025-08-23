@@ -1106,25 +1106,34 @@ class SpudVerse {
             }
         } catch (error) {
             // Mock leaderboard for development
-            const mockLeaderboard = [
-                { rank: 1, name: 'Potato King 👑', balance: 50000, level: '🌟 Legend' },
-                { rank: 2, name: 'Spud Master', balance: 35000, level: '🔥 Pro' },
-                { rank: 3, name: 'Farm Hero', balance: 28000, level: '⭐ Expert' },
-                { rank: 4, name: 'Crop Champion', balance: 22000, level: '🌱 Advanced' },
-                { rank: 5, name: 'Tater Lover', balance: 18000, level: '🥔 Skilled' },
-                { rank: 6, name: 'Potato Fan', balance: 15000, level: '🌿 Regular' },
-                { rank: 7, name: 'Spud Newbie', balance: 12000, level: '🌱 Beginner' },
-                { rank: 8, name: 'Farm Rookie', balance: 8000, level: '🌱 Starter' },
-                { rank: 9, name: 'Crop Cadet', balance: 5000, level: '🌱 Novice' },
-                { rank: 10, name: 'Potato Pal', balance: 3000, level: '🌱 Amateur' }
-            ];
+            const mockLeaderboard = {
+                leaderboard: [
+                    { rank: 1, name: 'Potato King 👑', balance: 50000, level: '🌟 Legend' },
+                    { rank: 2, name: 'Spud Master', balance: 35000, level: '🔥 Pro' },
+                    { rank: 3, name: 'Farm Hero', balance: 28000, level: '⭐ Expert' },
+                    { rank: 4, name: 'Crop Champion', balance: 22000, level: '🌱 Advanced' },
+                    { rank: 5, name: 'Tater Lover', balance: 18000, level: '🥔 Skilled' },
+                    { rank: 6, name: 'Potato Fan', balance: 15000, level: '🌿 Regular' },
+                    { rank: 7, name: 'Spud Newbie', balance: 12000, level: '🌱 Beginner' },
+                    { rank: 8, name: 'Farm Rookie', balance: 8000, level: '🌱 Starter' },
+                    { rank: 9, name: 'Crop Cadet', balance: 5000, level: '🌱 Novice' },
+                    { rank: 10, name: 'Potato Pal', balance: 3000, level: '🌱 Amateur' }
+                ],
+                userRank: null,
+                userBalance: this.gameData.balance || 0
+            };
             this.renderLeaderboard(mockLeaderboard);
         }
     }
 
-    renderLeaderboard(leaderboard) {
+    renderLeaderboard(data) {
         const container = document.getElementById('leaderboard-container');
         container.innerHTML = '';
+
+        // Handle both old format (array) and new format (object with leaderboard array)
+        const leaderboard = Array.isArray(data) ? data : data.leaderboard || [];
+        const userRank = data.userRank || null;
+        const userBalance = data.userBalance || this.gameData.balance || 0;
 
         leaderboard.forEach((player, index) => {
             const item = document.createElement('div');
@@ -1149,9 +1158,27 @@ class SpudVerse {
             container.appendChild(item);
         });
 
-        // Update user's rank
-        document.getElementById('user-rank').textContent = '42'; // Mock rank
-        document.getElementById('user-balance-rank').textContent = this.formatNumber(this.gameData.balance);
+        // Update user's rank - use real data from API or show "Unranked"
+        const userRankElement = document.getElementById('user-rank');
+        const userBalanceElement = document.getElementById('user-balance-rank');
+        
+        if (userRankElement) {
+            if (userRank && userRank > 0) {
+                userRankElement.textContent = userRank;
+            } else {
+                userRankElement.textContent = 'Unranked';
+            }
+        }
+        
+        if (userBalanceElement) {
+            userBalanceElement.textContent = this.formatNumber(userBalance);
+        }
+
+        console.log('📊 Leaderboard rendered:', {
+            leaderboardCount: leaderboard.length,
+            userRank: userRank,
+            userBalance: userBalance
+        });
     }
 
     updateProfile() {

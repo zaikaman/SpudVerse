@@ -738,6 +738,9 @@ app.post('/api/missions/claim', async (req, res) => {
 
 app.get('/api/leaderboard', async (req, res) => {
     try {
+        const userId = getUserIdFromRequest(req);
+        
+        // Get top 10 leaderboard
         const leaderboard = await db.getLeaderboard(10);
         const formattedLeaderboard = leaderboard.map((user, index) => ({
             rank: index + 1,
@@ -746,9 +749,29 @@ app.get('/api/leaderboard', async (req, res) => {
             level: getLevelFromBalance(user.balance)
         }));
 
+        let userRank = null;
+        let userBalance = 0;
+
+        // Get user's rank and balance if user is authenticated
+        if (userId) {
+            try {
+                const userStats = await db.getUserStats(userId);
+                userRank = userStats.rank || null;
+                userBalance = userStats.balance || 0;
+                
+                console.log(`📊 User ${userId} rank: ${userRank}, balance: ${userBalance}`);
+            } catch (error) {
+                console.warn('⚠️ Could not get user stats for leaderboard:', error.message);
+            }
+        }
+
         res.json({
             success: true,
-            data: formattedLeaderboard
+            data: {
+                leaderboard: formattedLeaderboard,
+                userRank: userRank,
+                userBalance: userBalance
+            }
         });
     } catch (error) {
         console.error('Leaderboard API Error:', error);
