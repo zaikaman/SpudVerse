@@ -296,6 +296,8 @@ class SupabaseDatabase {
                     completed: completed,
                     claimed: claimed,
                     completed_at: completedAt
+                }, {
+                    onConflict: 'user_id,mission_id'
                 })
                 .select()
                 .single();
