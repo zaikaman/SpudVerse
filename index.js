@@ -272,6 +272,37 @@ app.get('/api/missions', async (req, res) => {
     }
 });
 
+// Get user's Twitter connection status
+app.get('/api/user/twitter', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const userTwitter = await db.getUserTwitter(userId);
+        
+        if (userTwitter && userTwitter.twitter_username) {
+            res.json({
+                success: true,
+                data: {
+                    twitter_username: userTwitter.twitter_username,
+                    connected_at: userTwitter.twitter_connected_at
+                }
+            });
+        } else {
+            res.json({
+                success: false,
+                data: null
+            });
+        }
+
+    } catch (error) {
+        console.error('Get User Twitter API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 // Connect Twitter username
 app.post('/api/twitter/connect', async (req, res) => {
     try {

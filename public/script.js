@@ -691,9 +691,175 @@ class SpudVerse {
         }, 2000);
     }
 
+    async handleTwitterVerification() {
+        try {
+            // Check if user already has connected Twitter
+            const userTwitter = await this.checkUserTwitterConnection();
+            
+            if (!userTwitter) {
+                // Show Twitter username input dialog
+                const twitterUsername = await this.showTwitterInputDialog();
+                if (!twitterUsername) return; // User cancelled
+                
+                // Connect Twitter username first
+                const connectResult = await this.connectTwitterUsername(twitterUsername);
+                if (!connectResult.success) {
+                    this.showToast(connectResult.error || 'Failed to connect Twitter account', 'error');
+                    return;
+                }
+                
+                this.showToast(`✅ Twitter account @${twitterUsername} connected!`, 'success');
+            }
+            
+            // Now verify the follow
+            await this.verifyTwitterFollow();
+            
+        } catch (error) {
+            console.error('Twitter verification error:', error);
+            this.showToast('❌ Twitter verification failed', 'error');
+        }
+    }
+
+    async showTwitterInputDialog() {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.innerHTML = `
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>🐦 Connect Twitter Account</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Enter your Twitter/X username to verify your follow:</p>
+                        <input type="text" id="twitter-username-input" placeholder="@username or username" 
+                               style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; margin: 10px 0;">
+                        <p style="font-size: 14px; color: #666;">We'll check if you follow @RealSpudVerse</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove(); resolve(null);">Cancel</button>
+                        <button class="btn-primary" onclick="
+                            const input = document.getElementById('twitter-username-input');
+                            const username = input.value.trim();
+                            if (username) {
+                                this.closest('.modal-overlay').remove();
+                                resolve(username);
+                            } else {
+                                input.style.borderColor = '#ff4444';
+                                input.placeholder = 'Please enter your username';
+                            }
+                        ">Connect</button>
+                    </div>
+                </div>
+            `;
+            
+            // Add to page
+            document.body.appendChild(overlay);
+            
+            // Focus input
+            setTimeout(() => {
+                document.getElementById('twitter-username-input').focus();
+            }, 100);
+            
+            // Handle Enter key
+            document.getElementById('twitter-username-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const username = e.target.value.trim();
+                    if (username) {
+                        overlay.remove();
+                        resolve(username);
+                    }
+                }
+            });
+            
+            // Handle overlay click to close
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    async connectTwitterUsername(username) {
+        try {
+            const response = await fetch('/api/twitter/connect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `tma ${window.Telegram?.WebApp?.initData || ''}`
+                },
+                body: JSON.stringify({ twitter_username: username })
+            });
+
+            return await response.json();
+        } catch (error) {
+            console.error('Connect Twitter error:', error);
+            return { success: false, error: 'Connection failed' };
+        }
+    }
+
+    async checkUserTwitterConnection() {
+        try {
+            const response = await fetch('/api/user/twitter', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `tma ${window.Telegram?.WebApp?.initData || ''}`
+                }
+            });
+
+            const result = await response.json();
+            return result.success ? result.data : null;
+        } catch (error) {
+            console.error('Check Twitter connection error:', error);
+            return null;
+        }
+    }
+
+    async verifyTwitterFollow() {
+        this.showToast('🔍 Verifying Twitter follow...', 'info');
+        
+        try {
+            const response = await fetch('/api/missions/verify-channel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `tma ${window.Telegram?.WebApp?.initData || ''}`
+                },
+                body: JSON.stringify({ missionId: 3 })
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.verified) {
+                const mission = this.gameData.missions.find(m => m.id === 3);
+                if (mission) {
+                    mission.status = 'completed';
+                    this.renderMissions();
+                }
+                this.showToast('✅ Twitter follow verified! You can now claim your reward.', 'success');
+            } else {
+                if (result.error === 'TWITTER_NOT_CONNECTED') {
+                    this.showToast('❌ Please connect your Twitter account first!', 'error');
+                } else {
+                    this.showToast('❌ Please follow @RealSpudVerse first!', 'error');
+                }
+            }
+        } catch (error) {
+            console.error('Verify Twitter follow error:', error);
+            this.showToast('❌ Verification failed. Please try again.', 'error');
+        }
+    }
+
     async verifyChannelMission(missionId) {
         const mission = this.gameData.missions.find(m => m.id === missionId);
         if (!mission) return;
+
+        // Handle Twitter follow verification (requires username input)
+        if (missionId === 3) {
+            await this.handleTwitterVerification();
+            return;
+        }
 
         const verifyMessages = {
             2: '🔍 Verifying channel membership...',
