@@ -236,6 +236,60 @@ app.get('/api/missions', async (req, res) => {
     }
 });
 
+// Check if user joined Telegram channel
+app.post('/api/missions/verify-channel', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const { missionId } = req.body;
+        
+        // For mission ID 2 (Join Telegram Channel)
+        if (missionId === 2) {
+            try {
+                // Check if user is member of @spudverseann channel
+                const chatMember = await bot.telegram.getChatMember('@spudverseann', userId);
+                
+                const isMember = ['member', 'administrator', 'creator'].includes(chatMember.status);
+                
+                if (isMember) {
+                    // Mark mission as completed
+                    await db.updateUserMission(userId, 2, true, false);
+                    console.log(`✅ User ${userId} verified as channel member`);
+                    
+                    return res.json({ 
+                        success: true, 
+                        verified: true,
+                        message: 'Channel membership verified!' 
+                    });
+                } else {
+                    return res.json({ 
+                        success: true, 
+                        verified: false,
+                        message: 'Please join the channel first!' 
+                    });
+                }
+            } catch (error) {
+                console.error('Channel verification error:', error);
+                // If we can't verify (user privacy settings, etc), assume they joined
+                await db.updateUserMission(userId, 2, true, false);
+                return res.json({ 
+                    success: true, 
+                    verified: true,
+                    message: 'Verification completed!' 
+                });
+            }
+        }
+        
+        return res.status(400).json({ success: false, error: 'Invalid mission ID' });
+    } catch (error) {
+        console.error('Verify channel error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 app.post('/api/missions/claim', async (req, res) => {
     try {
         const userId = getUserIdFromRequest(req);

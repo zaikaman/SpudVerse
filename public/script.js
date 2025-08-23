@@ -617,6 +617,12 @@ class SpudVerse {
                 buttonText = '🎁 Claim Reward';
                 buttonClass = 'claim';
                 buttonAction = `onclick="spudverse.claimMission(${mission.id})"`;
+            } else if (mission.status === 'verify') {
+                statusText = '🔍 Ready to verify';
+                statusClass = 'verify';
+                buttonText = '🔍 Verify';
+                buttonClass = 'verify';
+                buttonAction = `onclick="spudverse.verifyChannelMission(${mission.id})"`;
             } else {
                 statusText = '⏳ Not completed';
                 statusClass = 'pending';
@@ -651,11 +657,18 @@ class SpudVerse {
         switch (missionId) {
             case 2: // Join Telegram Channel
                 if (this.tg) {
-                    this.tg.openTelegramLink('https://t.me/spudverse_channel');
+                    this.tg.openTelegramLink('https://t.me/spudverseann');
                 } else {
-                    window.open('https://t.me/spudverse_channel', '_blank');
+                    window.open('https://t.me/spudverseann', '_blank');
                 }
-                break;
+                
+                this.showToast('📢 Join the channel, then tap "Verify" to complete!', 'info');
+                
+                // Change mission status to verify mode
+                mission.status = 'verify';
+                this.renderMissions();
+                return; // Don't auto-complete this mission
+                
             case 3: // Follow Twitter
                 window.open('https://twitter.com/SpudVerse', '_blank');
                 break;
@@ -664,12 +677,43 @@ class SpudVerse {
                 break;
         }
 
-        // Mark as completed (in a real app, you'd verify this)
+        // Auto-complete for non-channel missions (in a real app, you'd verify this)
         setTimeout(() => {
             mission.status = 'completed';
             this.renderMissions();
             this.showToast('🎉 Mission completed! You can now claim your reward.', 'success');
         }, 2000);
+    }
+
+    async verifyChannelMission(missionId) {
+        const mission = this.gameData.missions.find(m => m.id === missionId);
+        if (!mission) return;
+
+        this.showToast('🔍 Verifying channel membership...', 'info');
+
+        try {
+            const response = await fetch('/api/missions/verify-channel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${window.Telegram?.WebApp?.initData || ''}`
+                },
+                body: JSON.stringify({ missionId })
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.verified) {
+                mission.status = 'completed';
+                this.renderMissions();
+                this.showToast('✅ Channel membership verified! You can now claim your reward.', 'success');
+            } else {
+                this.showToast('❌ Please join the channel first!', 'error');
+            }
+        } catch (error) {
+            console.error('Verify channel error:', error);
+            this.showToast('❌ Verification failed. Please try again.', 'error');
+        }
     }
 
     async claimMission(missionId) {
