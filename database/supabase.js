@@ -197,6 +197,56 @@ class SupabaseDatabase {
         }
     }
 
+    // Twitter methods
+    async updateUserTwitter(userId, twitterUsername) {
+        if (!this.client) return null;
+        
+        try {
+            const { data, error } = await this.client
+                .from('users')
+                .update({
+                    twitter_username: twitterUsername,
+                    twitter_connected_at: new Date().toISOString()
+                })
+                .eq('user_id', userId)
+                .select()
+                .single();
+                
+            if (error) {
+                console.error('Supabase updateUserTwitter error:', error);
+                return null;
+            }
+            
+            console.log(`✅ Twitter username updated for user ${userId}: @${twitterUsername}`);
+            return data;
+        } catch (error) {
+            console.error('updateUserTwitter error:', error);
+            return null;
+        }
+    }
+
+    async getUserTwitter(userId) {
+        if (!this.client) return null;
+        
+        try {
+            const { data, error } = await this.client
+                .from('users')
+                .select('twitter_username, twitter_connected_at')
+                .eq('user_id', userId)
+                .single();
+                
+            if (error) {
+                console.error('Supabase getUserTwitter error:', error);
+                return null;
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('getUserTwitter error:', error);
+            return null;
+        }
+    }
+
     // Mission methods
     async getMissions() {
         if (!this.client) {

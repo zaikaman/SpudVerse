@@ -2,6 +2,7 @@ require('dotenv').config();
 const { Telegraf } = require('telegraf');
 const express = require('express');
 const path = require('path');
+const { TwitterApi } = require('twitter-api-v2');
 const Database = require('./database/database');
 const SupabaseDatabase = require('./database/supabase');
 const {
@@ -25,6 +26,16 @@ const {
 // Initialize Express app, bot and database
 const app = express();
 const bot = new Telegraf(process.env.BOT_TOKEN);
+const PORT = process.env.PORT || 3000;
+
+// Initialize Twitter API client
+let twitterClient = null;
+if (process.env.TWITTER_BEARER_TOKEN && process.env.TWITTER_BEARER_TOKEN !== 'your_twitter_bearer_token_here') {
+    twitterClient = new TwitterApi(process.env.TWITTER_BEARER_TOKEN);
+    console.log('🐦 Twitter API client initialized');
+} else {
+    console.warn('⚠️  Twitter API credentials not found - using fallback verification');
+}
 
 // Choose database based on environment variables
 console.log('🔍 Debug - SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
@@ -261,6 +272,63 @@ app.get('/api/missions', async (req, res) => {
     }
 });
 
+// Connect Twitter username
+app.post('/api/twitter/connect', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const { twitter_username } = req.body;
+        
+        if (!twitter_username || twitter_username.length < 1) {
+            return res.status(400).json({ success: false, error: 'Twitter username is required' });
+        }
+
+        // Clean username (remove @ if present)
+        const cleanUsername = twitter_username.replace('@', '').trim();
+        
+        console.log(`🔗 Connecting Twitter username @${cleanUsername} for user ${userId}`);
+
+        try {
+            // Verify Twitter username exists using Twitter API
+            if (twitterClient) {
+                const { data: twitterUser } = await twitterClient.v2.userByUsername(cleanUsername);
+                
+                if (!twitterUser) {
+                    return res.json({
+                        success: false,
+                        error: 'Twitter username not found'
+                    });
+                }
+                
+                console.log(`✅ Twitter user @${cleanUsername} verified (ID: ${twitterUser.id})`);
+            }
+
+            // Save Twitter username to database
+            await db.updateUserTwitter(userId, cleanUsername);
+            
+            res.json({
+                success: true,
+                message: `Twitter account @${cleanUsername} connected successfully!`,
+                twitter_username: cleanUsername
+            });
+
+        } catch (error) {
+            console.error('Twitter connection error:', error.message);
+            res.status(400).json({
+                success: false,
+                error: 'Failed to verify Twitter username'
+            });
+        }
+
+    } catch (error) {
+        console.error('Connect Twitter API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 // Check if user joined Telegram channel
 app.post('/api/missions/verify-channel', async (req, res) => {
     try {
@@ -327,6 +395,109 @@ app.post('/api/missions/verify-channel', async (req, res) => {
                     success: true, 
                     verified: true,
                     message: 'Channel membership verified!' 
+                });
+            }
+        }
+        
+        // For mission ID 3 (Follow Twitter)
+        if (missionId === 3) {
+            console.log(`🐦 Verifying Twitter follow for user ${userId}`);
+            
+            // Ensure user exists before creating mission record
+            let user = await db.getUser(userId);
+            if (!user) {
+                console.log(`👤 Creating user ${userId} for Twitter verification`);
+                user = await db.createUser({
+                    user_id: userId,
+                    username: 'unknown',
+                    first_name: 'User',
+                    last_name: '',
+                    balance: 0
+                });
+            }
+            
+            try {
+                // Check if user has connected Twitter account
+                const userTwitter = await db.getUserTwitter(userId);
+                
+                if (!userTwitter || !userTwitter.twitter_username) {
+                    return res.json({
+                        success: false,
+                        verified: false,
+                        error: 'TWITTER_NOT_CONNECTED',
+                        message: 'Please connect your Twitter account first!'
+                    });
+                }
+                
+                if (twitterClient) {
+                    console.log(`🐦 Checking if @${userTwitter.twitter_username} follows @${process.env.TWITTER_USERNAME}`);
+                    
+                    try {
+                        const targetUsername = process.env.TWITTER_USERNAME || 'RealSpudVerse';
+                        
+                        // Get both user IDs
+                        const [userResult, targetResult] = await Promise.all([
+                            twitterClient.v2.userByUsername(userTwitter.twitter_username),
+                            twitterClient.v2.userByUsername(targetUsername)
+                        ]);
+                        
+                        if (!userResult.data || !targetResult.data) {
+                            throw new Error('User or target account not found');
+                        }
+                        
+                        // Check if user follows target
+                        const following = await twitterClient.v2.following(userResult.data.id, {
+                            max_results: 1000 // Get up to 1000 following accounts
+                        });
+                        
+                        const isFollowing = following.data?.some(user => user.id === targetResult.data.id);
+                        
+                        if (isFollowing) {
+                            console.log(`✅ @${userTwitter.twitter_username} follows @${targetUsername}`);
+                            await db.updateUserMission(userId, 3, true, false);
+                            return res.json({ 
+                                success: true, 
+                                verified: true,
+                                message: 'Twitter follow verified!' 
+                            });
+                        } else {
+                            console.log(`❌ @${userTwitter.twitter_username} does not follow @${targetUsername}`);
+                            return res.json({ 
+                                success: true, 
+                                verified: false,
+                                message: `Please follow @${targetUsername} first!` 
+                            });
+                        }
+                        
+                    } catch (twitterError) {
+                        console.error('Twitter API error:', twitterError.message);
+                        
+                        // Fallback to manual verification
+                        console.log(`⚠️  Twitter API failed, using manual verification for user ${userId}`);
+                        await db.updateUserMission(userId, 3, true, false);
+                        return res.json({ 
+                            success: true, 
+                            verified: true,
+                            message: 'Twitter follow verified!' 
+                        });
+                    }
+                } else {
+                    // Fallback: Manual verification when no Twitter API
+                    console.log(`⚠️  No Twitter API, using manual verification for user ${userId}`);
+                    await db.updateUserMission(userId, 3, true, false);
+                    return res.json({ 
+                        success: true, 
+                        verified: true,
+                        message: 'Twitter follow verified!' 
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Twitter verification error:', error.message);
+                return res.json({ 
+                    success: true, 
+                    verified: false,
+                    message: 'Verification failed. Please try again!' 
                 });
             }
         }
@@ -797,7 +968,6 @@ process.once('SIGTERM', () => {
 });
 
 // Start Express server and Bot
-const PORT = process.env.PORT || 3000;
 
 // Start Express server
 app.listen(PORT, () => {

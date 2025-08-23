@@ -671,7 +671,13 @@ class SpudVerse {
                 
             case 3: // Follow Twitter
                 window.open('https://twitter.com/SpudVerse', '_blank');
-                break;
+                
+                this.showToast('🐦 Follow @SpudVerse, then tap "Verify" to complete!', 'info');
+                
+                // Change mission status to verify mode
+                mission.status = 'verify';
+                this.renderMissions();
+                return; // Don't auto-complete this mission
             case 4: // Invite Friends
                 this.shareReferralLink();
                 break;
@@ -689,7 +695,12 @@ class SpudVerse {
         const mission = this.gameData.missions.find(m => m.id === missionId);
         if (!mission) return;
 
-        this.showToast('🔍 Verifying channel membership...', 'info');
+        const verifyMessages = {
+            2: '🔍 Verifying channel membership...',
+            3: '🔍 Verifying Twitter follow...'
+        };
+        
+        this.showToast(verifyMessages[missionId] || '🔍 Verifying...', 'info');
 
         try {
             const response = await fetch('/api/missions/verify-channel', {
@@ -706,9 +717,20 @@ class SpudVerse {
             if (result.success && result.verified) {
                 mission.status = 'completed';
                 this.renderMissions();
-                this.showToast('✅ Channel membership verified! You can now claim your reward.', 'success');
+                
+                const successMessages = {
+                    2: '✅ Channel membership verified! You can now claim your reward.',
+                    3: '✅ Twitter follow verified! You can now claim your reward.'
+                };
+                
+                this.showToast(successMessages[missionId] || '✅ Verification successful!', 'success');
             } else {
-                this.showToast('❌ Please join the channel first!', 'error');
+                const errorMessages = {
+                    2: '❌ Please join the channel first!',
+                    3: '❌ Please follow @SpudVerse first!'
+                };
+                
+                this.showToast(errorMessages[missionId] || '❌ Verification failed!', 'error');
             }
         } catch (error) {
             console.error('Verify channel error:', error);

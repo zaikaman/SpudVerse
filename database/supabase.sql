@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS users (
     max_energy INTEGER DEFAULT 100,
     energy_regen_rate INTEGER DEFAULT 1,
     last_energy_update BIGINT DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000,
+    twitter_username TEXT,
+    twitter_connected_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
