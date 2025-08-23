@@ -756,10 +756,16 @@ class SpudVerse {
                         <h3>🐦 Connect Twitter Account</h3>
                     </div>
                     <div class="modal-body">
-                        <p>Enter your Twitter/X username to verify your follow:</p>
+                        <p style="color: var(--text-color); font-size: 16px; margin-bottom: 20px; line-height: 1.5;">
+                            Enter your Twitter/X username to verify your follow:
+                        </p>
                         <input type="text" id="twitter-username-input" placeholder="@username or username" 
-                               style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; margin: 10px 0;">
-                        <p style="font-size: 14px; color: #666;">We'll check if you follow @RealSpudVerse</p>
+                               style="width: 100%; padding: 16px; border: 2px solid #ddd; border-radius: 12px; font-size: 18px; 
+                                      margin: 15px 0; background: white; color: #333; box-sizing: border-box;
+                                      transition: border-color 0.3s ease; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        <p style="font-size: 14px; color: var(--text-secondary); margin-top: 15px; line-height: 1.4;">
+                            We'll check if you follow <strong style="color: var(--primary-color);">@RealSpudVerse</strong>
+                        </p>
                     </div>
                     <div class="modal-footer">
                         <button class="btn-secondary" id="twitter-cancel-btn">Cancel</button>
@@ -795,9 +801,20 @@ class SpudVerse {
                 }
             });
             
-            // Focus input
+            // Focus input and add focus effects
             setTimeout(() => {
                 input.focus();
+                
+                // Add focus/blur effects
+                input.addEventListener('focus', () => {
+                    input.style.borderColor = '#667eea';
+                    input.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                });
+                
+                input.addEventListener('blur', () => {
+                    input.style.borderColor = '#ddd';
+                    input.style.boxShadow = 'none';
+                });
             }, 100);
             
             // Handle Enter key
