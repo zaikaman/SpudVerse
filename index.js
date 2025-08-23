@@ -242,6 +242,11 @@ app.post('/api/missions/claim', async (req, res) => {
 
         const userMission = await db.getUserMissionProgress(userId, missionId);
         if (!userMission || !userMission.completed || userMission.claimed) {
+            console.log(`🚨 Claim attempt blocked - User ${userId}, Mission ${missionId}:`, {
+                exists: !!userMission,
+                completed: userMission?.completed,
+                claimed: userMission?.claimed
+            });
             return res.status(400).json({ success: false, error: 'Cannot claim this mission' });
         }
 

@@ -674,7 +674,34 @@ class SpudVerse {
 
     async claimMission(missionId) {
         const mission = this.gameData.missions.find(m => m.id === missionId);
-        if (!mission || mission.claimed || mission.status !== 'completed') return;
+        if (!mission || mission.claimed || mission.status !== 'completed') {
+            console.warn('🚨 Claim blocked - Invalid mission state:', {
+                missionId,
+                found: !!mission,
+                claimed: mission?.claimed,
+                status: mission?.status
+            });
+            return;
+        }
+        
+        // Additional check - prevent if already processing
+        if (mission._claiming) {
+            console.warn('🚨 Claim blocked - Already processing');
+            return;
+        }
+        mission._claiming = true;
+
+        // Prevent double-clicking by immediately marking as claimed
+        mission.claimed = true;
+        this.renderMissions(); // Update UI immediately
+        
+        // Disable the specific button
+        const claimButton = document.querySelector(`[onclick="spudverse.claimMission(${missionId})"]`);
+        if (claimButton) {
+            claimButton.disabled = true;
+            claimButton.textContent = '⏳ Claiming...';
+            claimButton.style.opacity = '0.6';
+        }
 
         try {
             const response = await this.apiCall('/api/missions/claim', 'POST', { missionId });
@@ -691,18 +718,32 @@ class SpudVerse {
                 this.showToast(`🎉 You earned ${this.formatNumber(mission.reward)} SPUD!`, 'success');
                 this.confettiEffect();
             } else {
+                // Revert if claim failed
+                mission.claimed = false;
+                this.renderMissions();
                 this.showToast('❌ Failed to claim mission', 'error');
             }
             this.vibrate();
             
         } catch (error) {
-            // Handle locally for development
-            mission.claimed = true;
-            this.gameData.balance += mission.reward;
-            this.updateBalance();
+            console.error('❌ Claim mission error:', error);
+            
+            // Revert changes if API call failed
+            mission.claimed = false;
             this.renderMissions();
-            this.showToast(`🎉 You earned ${this.formatNumber(mission.reward)} SPUD!`, 'success');
-            this.saveProgress();
+            
+            // Re-enable button
+            const claimButton = document.querySelector(`[onclick="spudverse.claimMission(${missionId})"]`);
+            if (claimButton) {
+                claimButton.disabled = false;
+                claimButton.textContent = '🎁 Claim Reward';
+                claimButton.style.opacity = '1';
+            }
+            
+            this.showToast('❌ Network error. Please try again.', 'error');
+        } finally {
+            // Always clear the claiming flag
+            mission._claiming = false;
         }
     }
 
