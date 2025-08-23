@@ -63,6 +63,9 @@ class SpudVerse {
             // Hide loading and show game
             this.hideLoading();
             
+            // Set up global error handlers for debugging
+            this.setupGlobalErrorHandlers();
+            
             console.log('🚀 SpudVerse ready!');
         } catch (error) {
             console.error('💥 SpudVerse initialization failed:', error);
@@ -739,7 +742,7 @@ class SpudVerse {
                 stack: error.stack,
                 name: error.name
             });
-            this.showToast(`❌ Twitter verification failed: ${error.message}`, 'error');
+            this.showDebugError(error, 'Twitter Verification');
         }
     }
 
@@ -859,6 +862,10 @@ class SpudVerse {
                 stack: error.stack,
                 name: error.name
             });
+            
+            // Show debug error for detailed info
+            this.showDebugError(error, 'Twitter Connect API');
+            
             return { success: false, error: `Connection failed: ${error.message}` };
         }
     }
@@ -1308,7 +1315,84 @@ class SpudVerse {
             toast.style.animation = 'slideOut 0.3s ease forwards';
             setTimeout(() => toast.remove(), 300);
         }, 3000);
+    }
 
+    // Debug mode - show detailed errors in app
+    showDebugError(error, context = '') {
+        const errorMessage = `🐛 DEBUG${context ? ` [${context}]` : ''}: ${error.message || error}`;
+        console.error('Debug error:', error);
+        
+        // Show in toast for immediate visibility
+        this.showToast(errorMessage, 'error');
+        
+        // Also show in a debug overlay that can be dismissed
+        this.showDebugOverlay(error, context);
+    }
+
+    showDebugOverlay(error, context) {
+        // Remove existing debug overlay
+        const existingOverlay = document.getElementById('debug-overlay');
+        if (existingOverlay) existingOverlay.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'debug-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 99999;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-y: auto;
+        `;
+
+        overlay.innerHTML = `
+            <div style="max-width: 100%; word-wrap: break-word;">
+                <h3 style="color: #ff4444; margin-top: 0;">🐛 Debug Info</h3>
+                <p><strong>Context:</strong> ${context || 'General error'}</p>
+                <p><strong>Error:</strong> ${error.message || error}</p>
+                <p><strong>Stack:</strong></p>
+                <pre style="background: #333; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-size: 10px;">${error.stack || 'No stack trace'}</pre>
+                <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+                <button onclick="this.closest('#debug-overlay').remove()" 
+                        style="background: #ff4444; color: white; border: none; padding: 10px 20px; border-radius: 4px; margin-top: 10px; cursor: pointer;">
+                    Close Debug
+                </button>
+            </div>
+        `;
+
+        // Click outside to close
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+
+        document.body.appendChild(overlay);
+    }
+
+    setupGlobalErrorHandlers() {
+        // Catch unhandled errors
+        window.addEventListener('error', (e) => {
+            console.error('Global error caught:', e.error);
+            this.showDebugError(e.error, 'Global Error');
+        });
+
+        // Catch unhandled promise rejections
+        window.addEventListener('unhandledrejection', (e) => {
+            console.error('Unhandled promise rejection:', e.reason);
+            this.showDebugError(e.reason, 'Promise Rejection');
+            e.preventDefault(); // Prevent default behavior
+        });
+        
+        console.log('🔧 Global error handlers set up');
+    }
+
+    addToastStyles() {
         // Add slide out animation if not exists
         if (!document.querySelector('#toast-style')) {
             const style = document.createElement('style');
