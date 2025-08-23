@@ -26,6 +26,9 @@ class SpudVerse {
         this.lastSyncTime = Date.now();
         this.syncInterval = 2000; // Sync every 2 seconds
         
+        // Achievement tracking
+        this.userAchievements = []; // Store unlocked achievement IDs
+        
         this.init();
     }
 
@@ -41,6 +44,9 @@ class SpudVerse {
             
             // Load user data
             await this.loadUserData();
+            
+            // Load user achievements 
+            await this.loadUserAchievements();
             
             // Setup event listeners
             this.setupEventListeners();
@@ -167,6 +173,29 @@ class SpudVerse {
         }
         
         this.updateUI();
+    }
+
+    async loadUserAchievements() {
+        try {
+            console.log('🏆 Loading user achievements...');
+            
+            const response = await this.apiCall('/api/achievements', 'GET');
+            
+            if (response && response.success) {
+                // Store unlocked achievement IDs
+                this.userAchievements = response.data
+                    .filter(ach => ach.unlocked)
+                    .map(ach => ach.id);
+                    
+                console.log('✅ Loaded achievements:', this.userAchievements.length, 'unlocked');
+            } else {
+                console.warn('⚠️ Failed to load achievements from API');
+                this.userAchievements = [];
+            }
+        } catch (error) {
+            console.error('❌ Failed to load achievements:', error);
+            this.userAchievements = [];
+        }
     }
 
     useMockData() {
@@ -677,21 +706,9 @@ class SpudVerse {
     }
 
     checkAchievements() {
-        // Check for achievements based on current stats
-        const achievements = [
-            { threshold: 100, title: 'First Century!', desc: 'Earned 100 SPUD!' },
-            { threshold: 1000, title: 'Thousand Club!', desc: 'Earned 1,000 SPUD!' },
-            { threshold: 10000, title: 'Ten Thousand Legend!', desc: 'Earned 10,000 SPUD!' }
-        ];
-
-        achievements.forEach(achievement => {
-            if (this.gameData.balance >= achievement.threshold && 
-                !this.gameData.achievements.includes(achievement.threshold)) {
-                
-                this.gameData.achievements.push(achievement.threshold);
-                this.showAchievementUnlocked(achievement);
-            }
-        });
+        // Achievements are now handled by the backend API
+        // This function is deprecated but kept for compatibility
+        console.log('🏆 Achievement checking moved to backend API');
     }
 
     scheduleTapSync() {
@@ -732,13 +749,17 @@ class SpudVerse {
                 // Handle new achievements
                 if (response.data.newAchievements && response.data.newAchievements.length > 0) {
                     for (const achievement of response.data.newAchievements) {
-                        this.showAchievementUnlocked(achievement);
-                        
-                        // Award achievement reward
-                        if (achievement.reward > 0) {
-                            this.gameData.balance += achievement.reward;
-                            this.updateBalance();
-                            this.showToast(`🎁 Achievement reward: +${achievement.reward} SPUD!`, 'success');
+                        // Check if we already shown this achievement
+                        if (!this.userAchievements.includes(achievement.id)) {
+                            this.showAchievementUnlocked(achievement);
+                            this.userAchievements.push(achievement.id); // Track it
+                            
+                            // Award achievement reward
+                            if (achievement.reward > 0) {
+                                this.gameData.balance += achievement.reward;
+                                this.updateBalance();
+                                this.showToast(`🎁 Achievement reward: +${achievement.reward} SPUD!`, 'success');
+                            }
                         }
                     }
                 }
