@@ -696,7 +696,7 @@ class SpudVerse {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${window.Telegram?.WebApp?.initData || ''}`
+                    'Authorization': `tma ${window.Telegram?.WebApp?.initData || ''}`
                 },
                 body: JSON.stringify({ missionId })
             });
