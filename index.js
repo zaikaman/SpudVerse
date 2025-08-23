@@ -582,7 +582,7 @@ bot.start(async (ctx) => {
         await ctx.reply(
             `🥔 **Welcome to SpudVerse!** 🌱\n\n` +
             `Ready to become a potato farming legend?\n\n` +
-            `🎮 **Tap "Play Game" to start farming SPUD coins!**\n\n` +
+            `🎮 **Tap "Play" to start farming SPUD coins!**\n\n` +
             `🎁 **Features:**\n` +
             `• Interactive potato farming\n` +
             `• Epic airdrop missions\n` +
@@ -617,19 +617,14 @@ bot.start(async (ctx) => {
         const localUrl = `http://localhost:${process.env.PORT || 3000}`;
         await ctx.reply(
             `🥔 **Welcome to SpudVerse!** 🌱\n\n` +
-            `🛠️ **Development Mode**\n\n` +
-            `Copy and paste this link in your browser:\n` +
-            `\`${localUrl}\`\n\n` +
-            `🎮 **How to play:**\n` +
-            `• Tap the mega potato to farm SPUD coins\n` +
-            `• Complete airdrop missions for rewards\n` +
-            `• Compete on leaderboards\n` +
-            `• Invite friends for bonuses\n\n` +
-            `🚀 **Deploy steps:**\n` +
-            `1. Push code to GitHub\n` +
-            `2. Deploy on Vercel/Netlify\n` +
-            `3. Update WEB_APP_URL in .env\n` +
-            `4. Restart bot for Mini App!`,
+            `Ready to become a potato farming legend?\n\n` +
+            `🎮 **Tap "Play" to start farming SPUD coins!**\n\n` +
+            `🎁 **Features:**\n` +
+            `• Interactive potato farming\n` +
+            `• Epic airdrop missions\n` +
+            `• Leaderboard competition\n` +
+            `• Friend referral bonuses\n\n` +
+            `🚀 **Start your farming empire now!**`,
             {
                 parse_mode: 'Markdown'
             }
