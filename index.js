@@ -3,6 +3,7 @@ const { Telegraf } = require('telegraf');
 const express = require('express');
 const path = require('path');
 const Database = require('./database/database');
+const SupabaseDatabase = require('./database/supabase');
 const {
     getMainKeyboard,
     getBackButton,
@@ -24,7 +25,13 @@ const {
 // Initialize Express app, bot and database
 const app = express();
 const bot = new Telegraf(process.env.BOT_TOKEN);
-const db = new Database();
+
+// Choose database based on environment variables
+const db = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY 
+    ? new SupabaseDatabase() 
+    : new Database();
+
+console.log(`📊 Database: ${process.env.SUPABASE_URL ? 'Supabase' : 'SQLite'}`);
 
 // Middleware
 app.use(express.json());
