@@ -692,31 +692,54 @@ class SpudVerse {
     }
 
     async handleTwitterVerification() {
+        console.log('🐦 Frontend: Starting Twitter verification flow');
+        
         try {
             // Check if user already has connected Twitter
+            console.log('🔍 Frontend: Checking existing Twitter connection');
             const userTwitter = await this.checkUserTwitterConnection();
+            console.log('🔍 Frontend: Existing Twitter connection:', userTwitter);
             
             if (!userTwitter) {
+                console.log('🆕 Frontend: No existing Twitter connection, showing input dialog');
+                
                 // Show Twitter username input dialog
                 const twitterUsername = await this.showTwitterInputDialog();
-                if (!twitterUsername) return; // User cancelled
+                console.log('📝 Frontend: User entered username:', twitterUsername);
+                
+                if (!twitterUsername) {
+                    console.log('❌ Frontend: User cancelled Twitter input');
+                    return; // User cancelled
+                }
                 
                 // Connect Twitter username first
+                console.log('🔗 Frontend: Attempting to connect Twitter username');
                 const connectResult = await this.connectTwitterUsername(twitterUsername);
+                console.log('🔗 Frontend: Connect result:', connectResult);
+                
                 if (!connectResult.success) {
+                    console.error('❌ Frontend: Twitter connection failed:', connectResult.error);
                     this.showToast(connectResult.error || 'Failed to connect Twitter account', 'error');
                     return;
                 }
                 
+                console.log('✅ Frontend: Twitter connection successful');
                 this.showToast(`✅ Twitter account @${twitterUsername} connected!`, 'success');
+            } else {
+                console.log('✅ Frontend: Twitter already connected:', userTwitter.twitter_username);
             }
             
             // Now verify the follow
+            console.log('🔍 Frontend: Starting follow verification');
             await this.verifyTwitterFollow();
             
         } catch (error) {
-            console.error('Twitter verification error:', error);
-            this.showToast('❌ Twitter verification failed', 'error');
+            console.error('❌ Frontend: Twitter verification error:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
+            this.showToast(`❌ Twitter verification failed: ${error.message}`, 'error');
         }
     }
 
@@ -782,20 +805,61 @@ class SpudVerse {
     }
 
     async connectTwitterUsername(username) {
+        console.log('🔗 Frontend: Connecting Twitter username:', username);
+        
         try {
+            const requestData = { twitter_username: username };
+            const authHeader = `tma ${window.Telegram?.WebApp?.initData || ''}`;
+            
+            console.log('📤 Frontend: Sending Twitter connect request:', {
+                url: '/api/twitter/connect',
+                method: 'POST',
+                hasAuth: !!window.Telegram?.WebApp?.initData,
+                authLength: authHeader.length,
+                username: username
+            });
+
             const response = await fetch('/api/twitter/connect', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `tma ${window.Telegram?.WebApp?.initData || ''}`
+                    'Authorization': authHeader
                 },
-                body: JSON.stringify({ twitter_username: username })
+                body: JSON.stringify(requestData)
             });
 
-            return await response.json();
+            console.log('📥 Frontend: Twitter connect response status:', response.status, response.statusText);
+            
+            if (!response.ok) {
+                console.error('❌ Frontend: Twitter connect HTTP error:', response.status, response.statusText);
+                
+                // Try to get error details
+                let errorText;
+                try {
+                    errorText = await response.text();
+                    console.error('❌ Frontend: Error response body:', errorText);
+                } catch (e) {
+                    console.error('❌ Frontend: Could not read error response:', e);
+                }
+                
+                return { 
+                    success: false, 
+                    error: `HTTP ${response.status}: ${response.statusText}` 
+                };
+            }
+
+            const result = await response.json();
+            console.log('✅ Frontend: Twitter connect result:', result);
+            
+            return result;
+            
         } catch (error) {
-            console.error('Connect Twitter error:', error);
-            return { success: false, error: 'Connection failed' };
+            console.error('❌ Frontend: Connect Twitter error:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
+            return { success: false, error: `Connection failed: ${error.message}` };
         }
     }
 

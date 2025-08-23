@@ -305,29 +305,45 @@ app.get('/api/user/twitter', async (req, res) => {
 
 // Connect Twitter username
 app.post('/api/twitter/connect', async (req, res) => {
+    console.log('🔗 Twitter connect request received');
+    
     try {
         const userId = getUserIdFromRequest(req);
+        console.log('👤 Twitter connect - User ID:', userId);
+        
         if (!userId) {
+            console.log('❌ Twitter connect - No user ID');
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
         const { twitter_username } = req.body;
+        console.log('📝 Twitter connect - Raw username:', twitter_username);
         
         if (!twitter_username || twitter_username.length < 1) {
+            console.log('❌ Twitter connect - No username provided');
             return res.status(400).json({ success: false, error: 'Twitter username is required' });
         }
 
         // Clean username (remove @ if present)
         const cleanUsername = twitter_username.replace('@', '').trim();
+        console.log(`🧹 Twitter connect - Clean username: @${cleanUsername}`);
         
         console.log(`🔗 Connecting Twitter username @${cleanUsername} for user ${userId}`);
 
         try {
             // Verify Twitter username exists using Twitter API
             if (twitterClient) {
+                console.log('🐦 Twitter connect - Using Twitter API to verify username');
+                
                 const { data: twitterUser } = await twitterClient.v2.userByUsername(cleanUsername);
+                console.log('🐦 Twitter API response:', { 
+                    found: !!twitterUser, 
+                    userId: twitterUser?.id, 
+                    username: twitterUser?.username 
+                });
                 
                 if (!twitterUser) {
+                    console.log(`❌ Twitter user @${cleanUsername} not found`);
                     return res.json({
                         success: false,
                         error: 'Twitter username not found'
@@ -335,10 +351,24 @@ app.post('/api/twitter/connect', async (req, res) => {
                 }
                 
                 console.log(`✅ Twitter user @${cleanUsername} verified (ID: ${twitterUser.id})`);
+            } else {
+                console.log('⚠️  Twitter connect - No Twitter client, skipping API verification');
             }
 
             // Save Twitter username to database
-            await db.updateUserTwitter(userId, cleanUsername);
+            console.log(`💾 Saving Twitter username to database for user ${userId}`);
+            const dbResult = await db.updateUserTwitter(userId, cleanUsername);
+            console.log('💾 Database update result:', { success: !!dbResult, data: dbResult });
+            
+            if (!dbResult) {
+                console.log('❌ Failed to save Twitter username to database');
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to save Twitter connection'
+                });
+            }
+            
+            console.log(`✅ Twitter connection successful for user ${userId} -> @${cleanUsername}`);
             
             res.json({
                 success: true,
@@ -347,7 +377,11 @@ app.post('/api/twitter/connect', async (req, res) => {
             });
 
         } catch (error) {
-            console.error('Twitter connection error:', error.message);
+            console.error('❌ Twitter connection inner error:', {
+                message: error.message,
+                stack: error.stack,
+                code: error.code
+            });
             res.status(400).json({
                 success: false,
                 error: 'Failed to verify Twitter username'
@@ -355,7 +389,10 @@ app.post('/api/twitter/connect', async (req, res) => {
         }
 
     } catch (error) {
-        console.error('Connect Twitter API Error:', error);
+        console.error('❌ Connect Twitter API Error:', {
+            message: error.message,
+            stack: error.stack
+        });
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
