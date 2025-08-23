@@ -762,18 +762,8 @@ class SpudVerse {
                         <p style="font-size: 14px; color: #666;">We'll check if you follow @RealSpudVerse</p>
                     </div>
                     <div class="modal-footer">
-                        <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove(); resolve(null);">Cancel</button>
-                        <button class="btn-primary" onclick="
-                            const input = document.getElementById('twitter-username-input');
-                            const username = input.value.trim();
-                            if (username) {
-                                this.closest('.modal-overlay').remove();
-                                resolve(username);
-                            } else {
-                                input.style.borderColor = '#ff4444';
-                                input.placeholder = 'Please enter your username';
-                            }
-                        ">Connect</button>
+                        <button class="btn-secondary" id="twitter-cancel-btn">Cancel</button>
+                        <button class="btn-primary" id="twitter-connect-btn">Connect</button>
                     </div>
                 </div>
             `;
@@ -781,18 +771,45 @@ class SpudVerse {
             // Add to page
             document.body.appendChild(overlay);
             
+            // Set up event handlers
+            const input = document.getElementById('twitter-username-input');
+            const cancelBtn = document.getElementById('twitter-cancel-btn');
+            const connectBtn = document.getElementById('twitter-connect-btn');
+            
+            // Cancel button
+            cancelBtn.addEventListener('click', () => {
+                overlay.remove();
+                resolve(null);
+            });
+            
+            // Connect button
+            connectBtn.addEventListener('click', () => {
+                const username = input.value.trim();
+                if (username) {
+                    overlay.remove();
+                    resolve(username);
+                } else {
+                    input.style.borderColor = '#ff4444';
+                    input.placeholder = 'Please enter your username';
+                    input.focus();
+                }
+            });
+            
             // Focus input
             setTimeout(() => {
-                document.getElementById('twitter-username-input').focus();
+                input.focus();
             }, 100);
             
             // Handle Enter key
-            document.getElementById('twitter-username-input').addEventListener('keypress', (e) => {
+            input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     const username = e.target.value.trim();
                     if (username) {
                         overlay.remove();
                         resolve(username);
+                    } else {
+                        input.style.borderColor = '#ff4444';
+                        input.placeholder = 'Please enter your username';
                     }
                 }
             });
