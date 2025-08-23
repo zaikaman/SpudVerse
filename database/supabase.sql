@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS users (
     balance INTEGER DEFAULT 0,
     last_tap_time BIGINT DEFAULT 0,
     referrer_id BIGINT,
+    energy INTEGER DEFAULT 100,
+    max_energy INTEGER DEFAULT 100,
+    energy_regen_rate INTEGER DEFAULT 1,
+    last_energy_update BIGINT DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -200,5 +204,103 @@ BEGIN
     END IF;
     
     RETURN new_balance;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Energy calculation and update function
+CREATE OR REPLACE FUNCTION update_user_energy(p_user_id BIGINT, p_energy_cost INTEGER DEFAULT 1)
+RETURNS JSON AS $$
+DECLARE
+    user_record RECORD;
+    current_time BIGINT;
+    time_diff BIGINT;
+    energy_gained INTEGER;
+    new_energy INTEGER;
+    result JSON;
+BEGIN
+    current_time := EXTRACT(EPOCH FROM NOW()) * 1000;
+    
+    -- Get current user data
+    SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
+    
+    IF user_record IS NULL THEN
+        -- Create new user if doesn't exist
+        INSERT INTO users (user_id, username, first_name, last_name, last_energy_update)
+        VALUES (p_user_id, 'User' || p_user_id, 'Unknown', 'User', current_time)
+        RETURNING * INTO user_record;
+    END IF;
+    
+    -- Calculate energy regeneration
+    time_diff := current_time - user_record.last_energy_update;
+    energy_gained := FLOOR(time_diff / 10000) * user_record.energy_regen_rate; -- 10 seconds = 10000ms
+    
+    -- Calculate new energy (don't exceed max_energy)
+    new_energy := LEAST(user_record.energy + energy_gained, user_record.max_energy);
+    
+    -- Check if user has enough energy for the action
+    IF new_energy < p_energy_cost THEN
+        -- Not enough energy
+        result := json_build_object(
+            'success', false,
+            'error', 'insufficient_energy',
+            'current_energy', new_energy,
+            'max_energy', user_record.max_energy,
+            'time_to_full', (user_record.max_energy - new_energy) * 10000 / user_record.energy_regen_rate
+        );
+    ELSE
+        -- Consume energy and update
+        new_energy := new_energy - p_energy_cost;
+        
+        UPDATE users 
+        SET energy = new_energy,
+            last_energy_update = current_time,
+            updated_at = NOW()
+        WHERE user_id = p_user_id;
+        
+        result := json_build_object(
+            'success', true,
+            'current_energy', new_energy,
+            'max_energy', user_record.max_energy,
+            'energy_consumed', p_energy_cost,
+            'time_to_full', (user_record.max_energy - new_energy) * 10000 / user_record.energy_regen_rate
+        );
+    END IF;
+    
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get current energy without consuming
+CREATE OR REPLACE FUNCTION get_user_energy(p_user_id BIGINT)
+RETURNS JSON AS $$
+DECLARE
+    user_record RECORD;
+    current_time BIGINT;
+    time_diff BIGINT;
+    energy_gained INTEGER;
+    current_energy INTEGER;
+BEGIN
+    current_time := EXTRACT(EPOCH FROM NOW()) * 1000;
+    
+    SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
+    
+    IF user_record IS NULL THEN
+        RETURN json_build_object('current_energy', 100, 'max_energy', 100);
+    END IF;
+    
+    -- Calculate current energy
+    time_diff := current_time - user_record.last_energy_update;
+    energy_gained := FLOOR(time_diff / 10000) * user_record.energy_regen_rate;
+    current_energy := LEAST(user_record.energy + energy_gained, user_record.max_energy);
+    
+    RETURN json_build_object(
+        'current_energy', current_energy,
+        'max_energy', user_record.max_energy,
+        'energy_regen_rate', user_record.energy_regen_rate,
+        'time_to_full', CASE 
+            WHEN current_energy >= user_record.max_energy THEN 0
+            ELSE (user_record.max_energy - current_energy) * 10000 / user_record.energy_regen_rate
+        END
+    );
 END;
 $$ LANGUAGE plpgsql;

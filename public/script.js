@@ -8,6 +8,8 @@ class SpudVerse {
             balance: 0,
             energy: 100,
             maxEnergy: 100,
+            energyRegenRate: 1,
+            timeToFull: 0,
             perTap: 1,
             streak: 0,
             combo: 1,
@@ -312,6 +314,8 @@ class SpudVerse {
         const earnedSpud = Math.floor(this.gameData.perTap * this.gameData.combo);
         this.gameData.balance += earnedSpud;
         this.gameData.totalFarmed += earnedSpud;
+        
+        // Reduce energy immediately for responsive UI
         this.gameData.energy = Math.max(0, this.gameData.energy - 1);
         this.tapCount++;
         this.lastTapTime = currentTime;
@@ -415,17 +419,66 @@ class SpudVerse {
 
     updateEnergyBar() {
         const percentage = (this.gameData.energy / this.gameData.maxEnergy) * 100;
-        document.getElementById('energy-fill').style.width = percentage + '%';
-        document.getElementById('energy').textContent = this.gameData.energy;
+        const energyFill = document.getElementById('energy-fill');
+        const energyText = document.getElementById('energy');
+        
+        if (energyFill) {
+            energyFill.style.width = percentage + '%';
+            
+            // Color coding based on energy level
+            if (percentage <= 20) {
+                energyFill.style.background = 'linear-gradient(90deg, #ff4444, #ff6666)';
+            } else if (percentage <= 50) {
+                energyFill.style.background = 'linear-gradient(90deg, #ff8844, #ffaa66)';
+            } else {
+                energyFill.style.background = 'linear-gradient(90deg, #00ff88, #44ffaa)';
+            }
+        }
+        
+        if (energyText) {
+            energyText.textContent = `${this.gameData.energy}/${this.gameData.maxEnergy}`;
+            
+            // Add regeneration timer if energy is not full
+            if (this.gameData.energy < this.gameData.maxEnergy && this.gameData.timeToFull > 0) {
+                const timeText = this.formatTime(this.gameData.timeToFull);
+                energyText.textContent += ` (${timeText})`;
+            }
+        }
+    }
+
+    formatTime(milliseconds) {
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        
+        if (minutes > 0) {
+            return `${minutes}m ${seconds}s`;
+        } else {
+            return `${seconds}s`;
+        }
     }
 
     startEnergyRegen() {
-        this.energyRegenInterval = setInterval(() => {
-            if (this.gameData.energy < this.gameData.maxEnergy) {
-                this.gameData.energy = Math.min(this.gameData.maxEnergy, this.gameData.energy + 1);
-                this.updateEnergyBar();
+        // Energy regeneration: sync with backend data every 10 seconds
+        this.energyRegenInterval = setInterval(async () => {
+            try {
+                // Get current energy from backend (includes regeneration calculation)
+                const response = await this.apiCall('/api/energy', 'GET');
+                if (response && response.success) {
+                    this.gameData.energy = response.data.current_energy;
+                    this.gameData.maxEnergy = response.data.max_energy;
+                    this.gameData.energyRegenRate = response.data.energy_regen_rate;
+                    this.gameData.timeToFull = response.data.time_to_full;
+                    this.updateEnergyBar();
+                }
+            } catch (error) {
+                // Fallback to local calculation
+                if (this.gameData.energy < this.gameData.maxEnergy) {
+                    this.gameData.energy = Math.min(this.gameData.energy + this.gameData.energyRegenRate, this.gameData.maxEnergy);
+                    this.updateEnergyBar();
+                }
             }
-        }, 3000); // Regenerate 1 energy every 3 seconds
+        }, 10000); // 10 seconds to match backend
     }
 
     updateUI() {
@@ -746,6 +799,14 @@ class SpudVerse {
             if (response && response.success) {
                 console.log('✅ Sync successful, server balance:', response.data.balance);
                 
+                // Update energy from server response
+                if (response.data.energy !== undefined) {
+                    this.gameData.energy = response.data.energy;
+                    this.gameData.maxEnergy = response.data.maxEnergy;
+                    this.gameData.timeToFull = response.data.timeToFull;
+                    this.updateEnergyBar();
+                }
+                
                 // Handle new achievements
                 if (response.data.newAchievements && response.data.newAchievements.length > 0) {
                     for (const achievement of response.data.newAchievements) {
@@ -772,6 +833,14 @@ class SpudVerse {
                 this.pendingTaps += amount; // Add back if failed
             }
         } catch (error) {
+            // Handle energy errors specifically
+            if (error.response && error.response.status === 400) {
+                console.warn('⚡ Energy insufficient, stopping taps');
+                this.pendingTaps = 0; // Don't retry energy-blocked taps
+                this.showToast('⚡ Not enough energy! Wait for regeneration.', 'warning');
+                return;
+            }
+            
             console.error('❌ Sync error:', error);
             this.pendingTaps += amount; // Add back if failed
         }

@@ -108,13 +108,16 @@ app.get('/api/user', async (req, res) => {
 
         const user = await db.getUser(userId);
         const referralCount = await db.getReferralCount(userId);
+        const energyData = await db.getUserEnergy(userId);
         
         res.json({
             success: true,
             data: {
                 balance: user?.balance || 0,
-                energy: 100, // Mock energy, could be stored in DB
-                maxEnergy: 100,
+                energy: energyData.current_energy,
+                maxEnergy: energyData.max_energy,
+                energyRegenRate: energyData.energy_regen_rate,
+                timeToFull: energyData.time_to_full,
                 perTap: 1,
                 streak: 0,
                 combo: 1,
@@ -136,7 +139,21 @@ app.post('/api/tap', async (req, res) => {
         }
 
         const { amount } = req.body;
-        await db.updateUserBalance(userId, amount || 1);
+        const tapAmount = amount || 1;
+        
+        // Check energy before processing tap
+        const energyResult = await db.consumeEnergy(userId, tapAmount);
+        
+        if (!energyResult.success) {
+            return res.status(400).json({ 
+                success: false, 
+                error: energyResult.error,
+                energyData: energyResult
+            });
+        }
+        
+        // Process the tap
+        await db.updateUserBalance(userId, tapAmount);
         await db.updateLastTapTime(userId, Date.now());
 
         // Get updated user stats and check for achievements
@@ -147,7 +164,10 @@ app.post('/api/tap', async (req, res) => {
             success: true,
             data: {
                 balance: userStats.balance,
-                earned: amount || 1,
+                earned: tapAmount,
+                energy: energyResult.current_energy,
+                maxEnergy: energyResult.max_energy,
+                timeToFull: energyResult.time_to_full,
                 newAchievements: newAchievements.map(ua => ({
                     id: ua.achievements.id,
                     title: ua.achievements.title,
@@ -285,6 +305,62 @@ app.get('/api/achievements', async (req, res) => {
         });
     } catch (error) {
         console.error('Achievements API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// API endpoint to get current energy
+app.get('/api/energy', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const energyData = await db.getUserEnergy(userId);
+        
+        res.json({
+            success: true,
+            data: energyData
+        });
+    } catch (error) {
+        console.error('Energy API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// API endpoint for energy upgrades
+app.post('/api/energy/upgrade', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const { upgradeType, cost } = req.body;
+        
+        if (!upgradeType || !cost) {
+            return res.status(400).json({ success: false, error: 'Missing upgrade type or cost' });
+        }
+
+        const success = await db.upgradeUserEnergy(userId, upgradeType, cost);
+        
+        if (success) {
+            const updatedUser = await db.getUser(userId);
+            const energyData = await db.getUserEnergy(userId);
+            
+            res.json({
+                success: true,
+                data: {
+                    balance: updatedUser.balance,
+                    ...energyData
+                }
+            });
+        } else {
+            res.status(400).json({ success: false, error: 'Upgrade failed - insufficient balance' });
+        }
+    } catch (error) {
+        console.error('Energy Upgrade API Error:', error);
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });

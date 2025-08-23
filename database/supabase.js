@@ -499,6 +499,97 @@ class SupabaseDatabase {
         return subscription;
     }
 
+    // Energy methods
+    async getUserEnergy(userId) {
+        if (!this.client) {
+            return {
+                current_energy: 100,
+                max_energy: 100,
+                energy_regen_rate: 1,
+                time_to_full: 0
+            };
+        }
+        
+        try {
+            const { data, error } = await this.client
+                .rpc('get_user_energy', { p_user_id: userId });
+                
+            if (error) {
+                console.error('Supabase getUserEnergy error:', error);
+                return { current_energy: 100, max_energy: 100, energy_regen_rate: 1, time_to_full: 0 };
+            }
+            
+            return data || { current_energy: 100, max_energy: 100, energy_regen_rate: 1, time_to_full: 0 };
+        } catch (error) {
+            console.error('getUserEnergy error:', error);
+            return { current_energy: 100, max_energy: 100, energy_regen_rate: 1, time_to_full: 0 };
+        }
+    }
+
+    async consumeEnergy(userId, energyCost = 1) {
+        if (!this.client) {
+            return { success: false, error: 'No database connection' };
+        }
+        
+        try {
+            const { data, error } = await this.client
+                .rpc('update_user_energy', { 
+                    p_user_id: userId, 
+                    p_energy_cost: energyCost 
+                });
+                
+            if (error) {
+                console.error('Supabase consumeEnergy error:', error);
+                return { success: false, error: error.message };
+            }
+            
+            return data || { success: false, error: 'Unknown error' };
+        } catch (error) {
+            console.error('consumeEnergy error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async upgradeUserEnergy(userId, upgradeType, cost) {
+        if (!this.client) return false;
+        
+        try {
+            let updateFields = {};
+            
+            switch (upgradeType) {
+                case 'max_energy':
+                    updateFields.max_energy = 'max_energy + 25';
+                    break;
+                case 'regen_rate':
+                    updateFields.energy_regen_rate = 'energy_regen_rate + 1';
+                    break;
+                default:
+                    return false;
+            }
+            
+            // First deduct cost and upgrade
+            const { error } = await this.client
+                .from('users')
+                .update({
+                    balance: `balance - ${cost}`,
+                    ...updateFields,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('user_id', userId)
+                .gte('balance', cost);
+                
+            if (error) {
+                console.error('Supabase upgradeUserEnergy error:', error);
+                return false;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('upgradeUserEnergy error:', error);
+            return false;
+        }
+    }
+
     close() {
         // Supabase client doesn't need explicit closing
         console.log('📡 Supabase connection closed');
