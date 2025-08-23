@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: spudverse-bot
+    env: node
+    plan: free
+    buildCommand: npm install && npm run setup
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BOT_TOKEN
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+      - key: DATABASE_URL
+        value: ./database/spudverse.db
+      - key: SPUD_PER_TAP
+        value: 1
+      - key: TAP_COOLDOWN_MS
+        value: 1000
+      - key: REFERRAL_BONUS
+        value: 100
+      - key: DAILY_BONUS
+        value: 50

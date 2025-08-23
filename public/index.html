@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🥔 SpudVerse - Potato Farming Empire</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@300;400;700&family=Fredoka+One&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading" class="loading-screen">
+        <div class="potato-loader">
+            <div class="potato-bounce">🥔</div>
+            <div class="loading-text">Loading SpudVerse...</div>
+            <div class="loading-subtitle">Preparing your potato empire! 🌱</div>
+        </div>
+    </div>
+
+    <!-- Main Game Container -->
+    <div id="game" class="game-container" style="display: none;">
+        <!-- Header -->
+        <header class="game-header">
+            <div class="header-top">
+                <div class="user-info">
+                    <div class="avatar">
+                        <span class="avatar-emoji">🥔</span>
+                    </div>
+                    <div class="user-details">
+                        <div class="username" id="username">Potato Farmer</div>
+                        <div class="level">Level 1 🌱</div>
+                    </div>
+                </div>
+                <div class="balance-display">
+                    <div class="balance-amount">
+                        <span class="coin-icon">💰</span>
+                        <span id="balance">0</span>
+                        <span class="currency">SPUD</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="farm">🌱 Farm</button>
+                <button class="nav-tab" data-tab="airdrops">🎁 Airdrops</button>
+                <button class="nav-tab" data-tab="leaderboard">🏆 Ranks</button>
+                <button class="nav-tab" data-tab="profile">👤 Profile</button>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="game-content">
+            <!-- Farm Tab -->
+            <div id="farm-tab" class="tab-content active">
+                <div class="farm-area">
+                    <div class="farm-title">
+                        <h2>🥔 POTATO FARM EMPIRE 🥔</h2>
+                        <p class="farm-subtitle">Tap the potato to farm SPUD coins!</p>
+                    </div>
+                    
+                    <div class="farm-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Per Tap</span>
+                            <span class="stat-value">+<span id="per-tap">1</span> SPUD 🔥</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total Farmed</span>
+                            <span class="stat-value"><span id="total-farmed">0</span> SPUD 📈</span>
+                        </div>
+                    </div>
+
+                    <div class="potato-farm">
+                        <div class="farm-background">
+                            <div class="cloud cloud1">☁️</div>
+                            <div class="cloud cloud2">⛅</div>
+                            <div class="cloud cloud3">☁️</div>
+                        </div>
+                        
+                        <div class="mega-potato" id="mega-potato">
+                            <div class="potato-glow"></div>
+                            <div class="potato-main">🥔</div>
+                            <div class="tap-effect" id="tap-effect"></div>
+                        </div>
+                        
+                        <div class="farm-ground">
+                            <div class="grass">🌱🌿🌱🌿🌱🌿🌱</div>
+                        </div>
+                    </div>
+
+                    <div class="farm-footer">
+                        <div class="energy-bar">
+                            <div class="energy-label">⚡ Energy</div>
+                            <div class="energy-progress">
+                                <div class="energy-fill" id="energy-fill"></div>
+                            </div>
+                            <div class="energy-text"><span id="energy">100</span>/100</div>
+                        </div>
+                        
+                        <div class="farm-achievements">
+                            <div class="achievement">🔥 Streak: <span id="streak">0</span></div>
+                            <div class="achievement">⭐ Combo: x<span id="combo">1</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Airdrops Tab -->
+            <div id="airdrops-tab" class="tab-content">
+                <div class="airdrops-header">
+                    <h2>🎁 POTATO AIRDROPS</h2>
+                    <p>Complete epic missions to earn massive SPUD rewards!</p>
+                </div>
+                
+                <div class="missions-container" id="missions-container">
+                    <!-- Missions will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Leaderboard Tab -->
+            <div id="leaderboard-tab" class="tab-content">
+                <div class="leaderboard-header">
+                    <h2>🏆 POTATO LEGENDS</h2>
+                    <p>Top farmers in the SpudVerse! 👑</p>
+                </div>
+                
+                <div class="leaderboard-container" id="leaderboard-container">
+                    <!-- Leaderboard will be loaded here -->
+                </div>
+                
+                <div class="user-rank">
+                    <div class="rank-card">
+                        <span class="rank-position">#<span id="user-rank">-</span></span>
+                        <span class="rank-name">Your Rank</span>
+                        <span class="rank-score"><span id="user-balance-rank">0</span> SPUD</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Tab -->
+            <div id="profile-tab" class="tab-content">
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <div class="avatar-large">🥔</div>
+                        <div class="avatar-crown">👑</div>
+                    </div>
+                    <h2 id="profile-name">Potato Farmer</h2>
+                    <p class="profile-title">Legendary Spud Master 🌟</p>
+                </div>
+                
+                <div class="profile-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="profile-balance">0</div>
+                            <div class="stat-label">Total SPUD</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="profile-referrals">0</div>
+                            <div class="stat-label">Friends Invited</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="profile-missions">0</div>
+                            <div class="stat-label">Missions Done</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="profile-actions">
+                    <button class="action-btn primary" id="share-referral">
+                        🔗 Share Referral Link
+                        <small>Earn 100 SPUD per friend!</small>
+                    </button>
+                    
+                    <button class="action-btn secondary" id="view-achievements">
+                        🏅 View Achievements
+                        <small>Check your progress</small>
+                    </button>
+                </div>
+                
+                <div class="profile-footer">
+                    <p>🎮 Playing since: <span id="join-date">Today</span></p>
+                    <p>🔥 Longest streak: <span id="best-streak">0</span> days</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Floating Elements -->
+        <div class="floating-spuds" id="floating-spuds"></div>
+        
+        <!-- Toast Notifications -->
+        <div class="toast-container" id="toast-container"></div>
+    </div>
+
+    <!-- Popup Modals -->
+    <div id="achievement-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🎉 Achievement Unlocked!</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="achievement-display">
+                    <div class="achievement-icon">🏆</div>
+                    <div class="achievement-title">Potato Master</div>
+                    <div class="achievement-desc">You've earned 1000 SPUD!</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+const express = require('express');
+const serverless = require('serverless-http');
+const path = require('path');
+const Database = require('../../database/database');
+
+const app = express();
+
+// Initialize database
+const db = new Database();
+
+// Middleware
+app.use(express.json());
+
+// CORS middleware
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+    } else {
+        next();
+    }
+});
+
+// Helper function to extract user ID
+function getUserIdFromRequest(req) {
+    const auth = req.headers.authorization;
+    if (auth && auth.startsWith('tma ')) {
+        try {
+            const initData = auth.slice(4);
+            const params = new URLSearchParams(initData);
+            const userStr = params.get('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                return user.id;
+            }
+        } catch (error) {
+            console.error('Error parsing Telegram data:', error);
+        }
+    }
+    return req.query.userId || req.body.userId || 12345;
+}
+
+// Helper function to get level from balance
+function getLevelFromBalance(balance) {
+    if (balance >= 50000) return '🌟 Legend';
+    if (balance >= 25000) return '🔥 Pro';
+    if (balance >= 15000) return '⭐ Expert';
+    if (balance >= 8000) return '🌱 Advanced';
+    if (balance >= 3000) return '🥔 Skilled';
+    if (balance >= 1000) return '🌿 Regular';
+    return '🌱 Beginner';
+}
+
+// API Routes
+app.get('/user', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const user = await db.getUser(userId);
+        const referralCount = await db.getReferralCount(userId);
+        
+        res.json({
+            success: true,
+            data: {
+                balance: user?.balance || 0,
+                energy: 100,
+                maxEnergy: 100,
+                perTap: 1,
+                streak: 0,
+                combo: 1,
+                totalFarmed: user?.balance || 0,
+                referrals: referralCount
+            }
+        });
+    } catch (error) {
+        console.error('API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+app.post('/tap', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const { amount } = req.body;
+        await db.updateUserBalance(userId, amount || 1);
+        await db.updateLastTapTime(userId, Date.now());
+
+        const user = await db.getUser(userId);
+        res.json({
+            success: true,
+            data: {
+                newBalance: user?.balance || 0,
+                earned: amount || 1
+            }
+        });
+    } catch (error) {
+        console.error('Tap API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+app.get('/missions', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const missions = await db.getMissions();
+        const userMissions = await Promise.all(
+            missions.map(mission => db.getUserMissionProgress(userId, mission.id))
+        );
+
+        const missionsWithStatus = missions.map((mission, index) => {
+            const userMission = userMissions[index];
+            let status = 'pending';
+            let claimed = false;
+
+            if (userMission) {
+                if (userMission.completed) status = 'completed';
+                if (userMission.claimed) claimed = true;
+            }
+
+            return {
+                ...mission,
+                status,
+                claimed
+            };
+        });
+
+        res.json({
+            success: true,
+            data: missionsWithStatus
+        });
+    } catch (error) {
+        console.error('Missions API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+app.post('/missions/claim', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const { missionId } = req.body;
+        const missions = await db.getMissions();
+        const mission = missions.find(m => m.id === missionId);
+
+        if (!mission) {
+            return res.status(404).json({ success: false, error: 'Mission not found' });
+        }
+
+        const userMission = await db.getUserMissionProgress(userId, missionId);
+        if (!userMission || !userMission.completed || userMission.claimed) {
+            return res.status(400).json({ success: false, error: 'Cannot claim this mission' });
+        }
+
+        await db.updateUserBalance(userId, mission.reward);
+        await db.updateUserMission(userId, missionId, true, true);
+
+        res.json({
+            success: true,
+            data: {
+                reward: mission.reward,
+                message: `You earned ${mission.reward} SPUD!`
+            }
+        });
+    } catch (error) {
+        console.error('Claim API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+app.get('/leaderboard', async (req, res) => {
+    try {
+        const leaderboard = await db.getLeaderboard(10);
+        const formattedLeaderboard = leaderboard.map((user, index) => ({
+            rank: index + 1,
+            name: user.username ? `@${user.username}` : user.first_name || 'Anonymous',
+            balance: user.balance,
+            level: getLevelFromBalance(user.balance)
+        }));
+
+        res.json({
+            success: true,
+            data: formattedLeaderboard
+        });
+    } catch (error) {
+        console.error('Leaderboard API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+module.exports.handler = serverless(app);

@@ -1,0 +1,38 @@
+{
+  "name": "spudverse-bot",
+  "version": "1.0.0",
+  "description": "SpudVerse - Telegram Bot for farming SPUD coins with potato theme",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "setup": "node setup.js",
+    "build": "npm install"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "farming",
+    "spud",
+    "potato",
+    "crypto",
+    "miniapp",
+    "game"
+  ],
+  "author": "SpudVerse Team",
+  "license": "MIT",
+  "dependencies": {
+    "cron": "^3.1.6",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.2",
+    "sqlite3": "^5.1.6",
+    "telegraf": "^4.15.5",
+    "serverless-http": "^3.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
