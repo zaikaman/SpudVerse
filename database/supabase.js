@@ -279,6 +279,13 @@ class SupabaseDatabase {
         if (!this.client) return null;
         
         try {
+            console.log(`🔄 Supabase updateUserMission:`, {
+                userId,
+                missionId,
+                completed,
+                claimed
+            });
+            
             const completedAt = completed ? new Date().toISOString() : null;
             
             const { data, error } = await this.client
@@ -294,13 +301,14 @@ class SupabaseDatabase {
                 .single();
                 
             if (error) {
-                console.error('Supabase updateUserMission error:', error);
+                console.error('❌ Supabase updateUserMission error:', error);
                 return null;
             }
             
+            console.log(`✅ Supabase updateUserMission success:`, data);
             return data;
         } catch (error) {
-            console.error('updateUserMission error:', error);
+            console.error('❌ updateUserMission error:', error);
             return null;
         }
     }

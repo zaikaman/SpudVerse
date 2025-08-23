@@ -250,11 +250,23 @@ app.post('/api/missions/claim', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Cannot claim this mission' });
         }
 
+        console.log(`💰 Updating balance: +${mission.reward} SPUD for user ${userId}`);
         await db.updateUserBalance(userId, mission.reward);
+        
+        console.log(`📝 Marking mission ${missionId} as claimed for user ${userId}`);
         await db.updateUserMission(userId, missionId, true, true);
+        
+        // Verify the mission was actually updated
+        const verifyMission = await db.getUserMissionProgress(userId, missionId);
+        console.log(`🔍 Mission ${missionId} status after update:`, {
+            completed: verifyMission?.completed,
+            claimed: verifyMission?.claimed,
+            exists: !!verifyMission
+        });
         
         // Get updated user data
         const updatedUser = await db.getUser(userId);
+        console.log(`💵 Updated user balance: ${updatedUser.balance}`);
 
         res.json({
             success: true,

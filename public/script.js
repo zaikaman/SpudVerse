@@ -712,7 +712,9 @@ class SpudVerse {
                 this.updateBalance();
                 
                 // Reload missions from API to get updated status
+                console.log(`🔄 Reloading missions after claim for mission ${missionId}`);
                 await this.loadMissions();
+                console.log(`📋 Missions after reload:`, this.gameData.missions.find(m => m.id === missionId));
                 this.renderMissions();
                 
                 this.showToast(`🎉 You earned ${this.formatNumber(mission.reward)} SPUD!`, 'success');
