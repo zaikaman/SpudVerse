@@ -679,14 +679,20 @@ class SpudVerse {
         try {
             const response = await this.apiCall('/api/missions/claim', 'POST', { missionId });
             
-            mission.claimed = true;
-            this.gameData.balance += mission.reward;
-            
-            this.updateBalance();
-            this.renderMissions();
-            
-            this.showToast(`🎉 You earned ${this.formatNumber(mission.reward)} SPUD!`, 'success');
-            this.confettiEffect();
+            if (response && response.success) {
+                // Update balance from server response
+                this.gameData.balance = response.data.balance;
+                this.updateBalance();
+                
+                // Reload missions from API to get updated status
+                await this.loadMissions();
+                this.renderMissions();
+                
+                this.showToast(`🎉 You earned ${this.formatNumber(mission.reward)} SPUD!`, 'success');
+                this.confettiEffect();
+            } else {
+                this.showToast('❌ Failed to claim mission', 'error');
+            }
             this.vibrate();
             
         } catch (error) {

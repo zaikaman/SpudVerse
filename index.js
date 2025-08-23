@@ -110,6 +110,9 @@ app.get('/api/user', async (req, res) => {
         const referralCount = await db.getReferralCount(userId);
         const energyData = await db.getUserEnergy(userId);
         
+        // Auto-complete welcome mission for new users
+        await db.updateUserMission(userId, 1, true, false); // Mission ID 1 = Welcome to SpudVerse
+        
         res.json({
             success: true,
             data: {
@@ -244,11 +247,15 @@ app.post('/api/missions/claim', async (req, res) => {
 
         await db.updateUserBalance(userId, mission.reward);
         await db.updateUserMission(userId, missionId, true, true);
+        
+        // Get updated user data
+        const updatedUser = await db.getUser(userId);
 
         res.json({
             success: true,
             data: {
                 reward: mission.reward,
+                balance: updatedUser.balance,
                 message: `You earned ${mission.reward} SPUD!`
             }
         });
