@@ -148,17 +148,27 @@ app.get('/api/user', async (req, res) => {
 app.post('/api/tap', async (req, res) => {
     try {
         const userId = getUserIdFromRequest(req);
+        console.log('🎯 Tap request - User ID:', userId);
+        
         if (!userId) {
+            console.log('❌ Tap rejected - No user ID');
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
         const { amount } = req.body;
         const tapAmount = amount || 1;
+        console.log('⚡ Tap amount:', tapAmount);
+        
+        // Get current energy before consumption
+        const currentEnergyData = await db.getUserEnergy(userId);
+        console.log('🔋 Current energy before tap:', currentEnergyData);
         
         // Check energy before processing tap
         const energyResult = await db.consumeEnergy(userId, tapAmount);
+        console.log('🔋 Energy consumption result:', energyResult);
         
         if (!energyResult.success) {
+            console.log('❌ Tap rejected - Insufficient energy:', energyResult.error);
             return res.status(400).json({ 
                 success: false, 
                 error: energyResult.error,
@@ -166,7 +176,12 @@ app.post('/api/tap', async (req, res) => {
             });
         }
         
+        // Get energy after consumption
+        const newEnergyData = await db.getUserEnergy(userId);
+        console.log('🔋 Energy after consumption:', newEnergyData);
+        
         // Process the tap
+        console.log('💰 Updating user balance by:', tapAmount);
         await db.updateUserBalance(userId, tapAmount);
         await db.updateLastTapTime(userId, Date.now());
 
@@ -174,22 +189,26 @@ app.post('/api/tap', async (req, res) => {
         const userStats = await db.getUserStats(userId);
         const newAchievements = await db.checkAndUnlockAchievements(userId, userStats);
 
+        const responseData = {
+            balance: userStats.balance,
+            earned: tapAmount,
+            energy: energyResult.current_energy,
+            maxEnergy: energyResult.max_energy,
+            timeToFull: energyResult.time_to_full,
+            newAchievements: newAchievements.map(ua => ({
+                id: ua.achievements.id,
+                title: ua.achievements.title,
+                description: ua.achievements.description,
+                icon: ua.achievements.icon,
+                reward: ua.achievements.reward
+            }))
+        };
+        
+        console.log('✅ Tap success - Response data:', responseData);
+        
         res.json({
             success: true,
-            data: {
-                balance: userStats.balance,
-                earned: tapAmount,
-                energy: energyResult.current_energy,
-                maxEnergy: energyResult.max_energy,
-                timeToFull: energyResult.time_to_full,
-                newAchievements: newAchievements.map(ua => ({
-                    id: ua.achievements.id,
-                    title: ua.achievements.title,
-                    description: ua.achievements.description,
-                    icon: ua.achievements.icon,
-                    reward: ua.achievements.reward
-                }))
-            }
+            data: responseData
         });
     } catch (error) {
         console.error('Tap API Error:', error);
