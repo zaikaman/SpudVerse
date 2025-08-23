@@ -531,9 +531,10 @@ app.listen(PORT, () => {
 
 if (process.env.NODE_ENV === 'production') {
     // Webhook mode for production
+    const webhookUrl = process.env.WEBHOOK_URL || process.env.WEB_APP_URL || `https://spudverse.vercel.app`;
     bot.launch({
         webhook: {
-            domain: process.env.WEBHOOK_URL,
+            domain: webhookUrl,
             port: PORT + 1 // Use different port for webhook
         }
     });

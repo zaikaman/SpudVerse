@@ -81,8 +81,8 @@ class SupabaseDatabase {
             // Use atomic increment to avoid race conditions
             const { data, error } = await this.client
                 .rpc('increment_user_balance', {
-                    user_id: userId,
-                    amount: amount
+                    p_user_id: userId,
+                    p_amount: amount
                 });
                 
             if (error) {

@@ -138,23 +138,23 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create atomic balance increment function
-CREATE OR REPLACE FUNCTION increment_user_balance(user_id BIGINT, amount INTEGER)
+CREATE OR REPLACE FUNCTION increment_user_balance(p_user_id BIGINT, p_amount INTEGER)
 RETURNS INTEGER AS $$
 DECLARE
     new_balance INTEGER;
 BEGIN
     -- Atomic update with returning the new balance
     UPDATE users 
-    SET balance = balance + amount,
+    SET balance = balance + p_amount,
         updated_at = NOW()
-    WHERE users.user_id = increment_user_balance.user_id
+    WHERE users.user_id = p_user_id
     RETURNING balance INTO new_balance;
     
     -- If user doesn't exist, create them with the amount
     IF new_balance IS NULL THEN
         INSERT INTO users (user_id, balance, username, first_name, last_name)
-        VALUES (increment_user_balance.user_id, amount, 'User' || increment_user_balance.user_id, 'Unknown', 'User')
-        ON CONFLICT (user_id) DO UPDATE SET balance = users.balance + amount
+        VALUES (p_user_id, p_amount, 'User' || p_user_id, 'Unknown', 'User')
+        ON CONFLICT (user_id) DO UPDATE SET balance = users.balance + p_amount
         RETURNING balance INTO new_balance;
     END IF;
     
