@@ -113,6 +113,10 @@ app.get('/api/user', async (req, res) => {
         // Auto-complete welcome mission for new users
         await db.updateUserMission(userId, 1, true, false); // Mission ID 1 = Welcome to SpudVerse
         
+        // Auto-complete daily login mission (always mark as completed when user accesses app)
+        console.log('📅 Auto-completing daily login mission');
+        await db.updateUserMission(userId, 5, true, false); // Mission ID 5 = Daily Login
+        
         res.json({
             success: true,
             data: {
