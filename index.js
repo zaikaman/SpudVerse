@@ -124,6 +124,9 @@ app.get('/api/user', async (req, res) => {
             await db.updateUserMission(userId, 5, true, false); // Mission ID 5 = Daily Login
         }
         
+        // Check balance missions on user load
+        await checkBalanceMissions(userId, user?.balance || 0);
+        
         res.json({
             success: true,
             data: {
@@ -188,6 +191,9 @@ app.post('/api/tap', async (req, res) => {
         // Get updated user stats and check for achievements
         const userStats = await db.getUserStats(userId);
         const newAchievements = await db.checkAndUnlockAchievements(userId, userStats);
+        
+        // Auto-complete balance-based missions
+        await checkBalanceMissions(userId, userStats.balance);
 
         const responseData = {
             balance: userStats.balance,
@@ -495,6 +501,28 @@ app.post('/api/energy/upgrade', async (req, res) => {
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
+
+// Helper function to check and complete balance-based missions
+async function checkBalanceMissions(userId, currentBalance) {
+    try {
+        console.log(`💰 Checking balance missions for user ${userId}, balance: ${currentBalance}`);
+        
+        // Mission ID 6: Reach 1K SPUD (1000 SPUD)
+        if (currentBalance >= 1000) {
+            const mission6Progress = await db.getUserMissionProgress(userId, 6);
+            if (!mission6Progress || !mission6Progress.completed) {
+                console.log(`🎯 Auto-completing "Reach 1K SPUD" mission for user ${userId}`);
+                await db.updateUserMission(userId, 6, true, false);
+            }
+        }
+        
+        // Add more balance milestones here if needed
+        // Example: 5K SPUD, 10K SPUD missions
+        
+    } catch (error) {
+        console.error('Error checking balance missions:', error);
+    }
+}
 
 // Helper function to extract user ID from Telegram Mini App request
 function getUserIdFromRequest(req) {
