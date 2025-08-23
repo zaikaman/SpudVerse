@@ -31,6 +31,10 @@ class SpudVerse {
         // Achievement tracking
         this.userAchievements = []; // Store unlocked achievement IDs
         
+        // Local energy regeneration tracking
+        this.lastEnergyUpdate = Date.now();
+        this.localRegenTimer = null;
+        
         this.init();
     }
 
@@ -165,6 +169,9 @@ class SpudVerse {
             if (response && response.success) {
                 console.log('✅ API data loaded:', response.data);
                 this.gameData = { ...this.gameData, ...response.data };
+                
+                // Initialize local energy tracking
+                this.lastEnergyUpdate = Date.now();
             } else {
                 console.log('⚠️ API failed, using mock data');
                 this.useMockData();
@@ -459,26 +466,73 @@ class SpudVerse {
     }
 
     startEnergyRegen() {
-        // Energy regeneration: sync with backend data every 10 seconds
+        // Start local real-time countdown (100ms)
+        this.startLocalEnergyTimer();
+        
+        // Start backend sync (10 seconds)
+        this.startBackendEnergySync();
+    }
+
+    startLocalEnergyTimer() {
+        // Update countdown every 100ms for smooth real-time experience
+        this.localRegenTimer = setInterval(() => {
+            if (this.gameData.energy < this.gameData.maxEnergy) {
+                // Calculate time since last energy update
+                const now = Date.now();
+                const timePassed = now - this.lastEnergyUpdate;
+                
+                // Check if we should regenerate energy (every 10 seconds)
+                if (timePassed >= 10000) {
+                    const energyToAdd = Math.floor(timePassed / 10000) * this.gameData.energyRegenRate;
+                    if (energyToAdd > 0) {
+                        this.gameData.energy = Math.min(this.gameData.energy + energyToAdd, this.gameData.maxEnergy);
+                        this.lastEnergyUpdate = now - (timePassed % 10000); // Keep remainder
+                    }
+                }
+                
+                // Update time to full for display
+                if (this.gameData.energy < this.gameData.maxEnergy) {
+                    const energyNeeded = this.gameData.maxEnergy - this.gameData.energy;
+                    const timeToNextEnergy = 10000 - (now - this.lastEnergyUpdate);
+                    this.gameData.timeToFull = (energyNeeded - 1) * 10000 + timeToNextEnergy;
+                } else {
+                    this.gameData.timeToFull = 0;
+                }
+                
+                this.updateEnergyBar();
+            }
+        }, 100); // Update every 100ms for smooth countdown
+    }
+
+    startBackendEnergySync() {
+        // Sync with backend every 10 seconds for accuracy
         this.energyRegenInterval = setInterval(async () => {
             try {
-                // Get current energy from backend (includes regeneration calculation)
                 const response = await this.apiCall('/api/energy', 'GET');
                 if (response && response.success) {
+                    // Update game data with server values
                     this.gameData.energy = response.data.current_energy;
                     this.gameData.maxEnergy = response.data.max_energy;
                     this.gameData.energyRegenRate = response.data.energy_regen_rate;
-                    this.gameData.timeToFull = response.data.time_to_full;
-                    this.updateEnergyBar();
+                    this.lastEnergyUpdate = Date.now(); // Reset local timer
+                    
+                    console.log('🔄 Energy synced with backend:', this.gameData.energy);
                 }
             } catch (error) {
-                // Fallback to local calculation
-                if (this.gameData.energy < this.gameData.maxEnergy) {
-                    this.gameData.energy = Math.min(this.gameData.energy + this.gameData.energyRegenRate, this.gameData.maxEnergy);
-                    this.updateEnergyBar();
-                }
+                console.warn('⚠️ Backend energy sync failed, using local calculation');
             }
-        }, 10000); // 10 seconds to match backend
+        }, 10000); // 10 seconds
+    }
+
+    stopEnergyRegen() {
+        if (this.localRegenTimer) {
+            clearInterval(this.localRegenTimer);
+            this.localRegenTimer = null;
+        }
+        if (this.energyRegenInterval) {
+            clearInterval(this.energyRegenInterval);
+            this.energyRegenInterval = null;
+        }
     }
 
     updateUI() {
