@@ -110,12 +110,19 @@ app.get('/api/user', async (req, res) => {
         const referralCount = await db.getReferralCount(userId);
         const energyData = await db.getUserEnergy(userId);
         
-        // Auto-complete welcome mission for new users
-        await db.updateUserMission(userId, 1, true, false); // Mission ID 1 = Welcome to SpudVerse
+        // Auto-complete welcome mission if not already completed
+        const welcomeMission = await db.getUserMissionProgress(userId, 1);
+        if (!welcomeMission || !welcomeMission.completed) {
+            console.log('🎉 Auto-completing welcome mission for user');
+            await db.updateUserMission(userId, 1, true, false); // Mission ID 1 = Welcome to SpudVerse
+        }
         
-        // Auto-complete daily login mission (always mark as completed when user accesses app)
-        console.log('📅 Auto-completing daily login mission');
-        await db.updateUserMission(userId, 5, true, false); // Mission ID 5 = Daily Login
+        // Auto-complete daily login mission if not already completed
+        const dailyLoginMission = await db.getUserMissionProgress(userId, 5);
+        if (!dailyLoginMission || !dailyLoginMission.completed) {
+            console.log('📅 Auto-completing daily login mission');
+            await db.updateUserMission(userId, 5, true, false); // Mission ID 5 = Daily Login
+        }
         
         res.json({
             success: true,
