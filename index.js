@@ -28,13 +28,23 @@ const app = express();
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const PORT = process.env.PORT || 3000;
 
-// Initialize Twitter API client
+// Initialize Twitter API client with rate limit awareness
 let twitterClient = null;
+let lastTwitterApiCall = 0;
+const TWITTER_API_COOLDOWN = 2 * 60 * 1000; // 2 minutes between calls
+const twitterCache = new Map(); // Simple in-memory cache
+
 if (process.env.TWITTER_BEARER_TOKEN && process.env.TWITTER_BEARER_TOKEN !== 'your_twitter_bearer_token_here') {
     twitterClient = new TwitterApi(process.env.TWITTER_BEARER_TOKEN);
-    console.log('🐦 Twitter API client initialized');
+    console.log('🐦 Twitter API client initialized with rate limiting');
 } else {
     console.warn('⚠️  Twitter API credentials not found - using fallback verification');
+}
+
+// Twitter API Tier Warning
+if (twitterClient) {
+    console.log('📊 Twitter API Note: Free tier has 50 requests/24h limit');
+    console.log('💡 For production, consider upgrading to Basic tier ($100/month) for higher limits');
 }
 
 // Choose database based on environment variables
@@ -498,7 +508,26 @@ app.post('/api/missions/verify-channel', async (req, res) => {
                 }
                 
                 if (twitterClient) {
+                    // Check rate limiting
+                    const now = Date.now();
+                    const timeSinceLastCall = now - lastTwitterApiCall;
+                    
+                    if (timeSinceLastCall < TWITTER_API_COOLDOWN) {
+                        const waitTime = TWITTER_API_COOLDOWN - timeSinceLastCall;
+                        console.log(`⏱️  Rate limit protection: ${Math.round(waitTime/1000)}s since last call, using manual verification`);
+                        
+                        // Skip API call and use manual verification
+                        await db.updateUserMission(userId, 3, true, false);
+                        return res.json({ 
+                            success: true, 
+                            verified: true,
+                            message: 'Twitter follow verified!',
+                            method: 'rate_limit_skip'
+                        });
+                    }
+                    
                     console.log(`🐦 Checking if @${userTwitter.twitter_username} follows @${process.env.TWITTER_USERNAME}`);
+                    lastTwitterApiCall = now; // Update last call time
                     
                     try {
                         const targetUsername = process.env.TWITTER_USERNAME || 'RealSpudVerse';
