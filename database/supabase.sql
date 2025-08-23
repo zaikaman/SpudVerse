@@ -92,7 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_achievements_type ON achievements(type);
 INSERT INTO missions (title, description, reward, type, requirements) VALUES
 ('🎉 Welcome to SpudVerse', 'Complete account registration', 100, 'welcome', '{"action": "register"}'),
 ('📢 Join Telegram Channel', 'Join our official channel @spudverseann', 250, 'social', '{"action": "join_channel", "channel": "@spudverseann", "url": "https://t.me/spudverseann"}'),
-('🐦 Follow Twitter', 'Follow @SpudVerse on Twitter', 200, 'social', '{"action": "follow_twitter", "username": "@SpudVerse"}'),
+('🐦 Follow Twitter', 'Follow @RealSpudVerse on X (Twitter)', 200, 'social', '{"action": "follow_twitter", "username": "@RealSpudVerse", "url": "https://x.com/RealSpudVerse"}'),
 ('👥 Invite 5 Friends', 'Invite 5 friends to join SpudVerse', 500, 'referral', '{"action": "invite_friends", "count": 5}'),
 ('🔥 Daily Login', 'Login daily for 7 days straight', 300, 'daily', '{"action": "daily_login", "days": 7}'),
 ('💎 Reach 1K SPUD', 'Accumulate 1000 SPUD coins', 150, 'achievement', '{"action": "reach_balance", "amount": 1000}')

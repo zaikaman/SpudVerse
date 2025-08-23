@@ -670,9 +670,9 @@ class SpudVerse {
                 return; // Don't auto-complete this mission
                 
             case 3: // Follow Twitter
-                window.open('https://twitter.com/SpudVerse', '_blank');
+                window.open('https://x.com/RealSpudVerse', '_blank');
                 
-                this.showToast('🐦 Follow @SpudVerse, then tap "Verify" to complete!', 'info');
+                this.showToast('🐦 Follow @RealSpudVerse, then tap "Verify" to complete!', 'info');
                 
                 // Change mission status to verify mode
                 mission.status = 'verify';
@@ -727,7 +727,7 @@ class SpudVerse {
             } else {
                 const errorMessages = {
                     2: '❌ Please join the channel first!',
-                    3: '❌ Please follow @SpudVerse first!'
+                    3: '❌ Please follow @RealSpudVerse first!'
                 };
                 
                 this.showToast(errorMessages[missionId] || '❌ Verification failed!', 'error');
