@@ -1894,4 +1894,3 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 });
-});
