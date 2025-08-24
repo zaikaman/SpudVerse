@@ -1270,6 +1270,11 @@ class SpudVerse {
             
                     if (response && response.success) {
                         this.shopItems = response.data; // Store all items
+                        
+                        if (!Array.isArray(this.shopItems)) {
+                            throw new Error(`Shop API returned invalid data for shopItems. Expected array, got: ${JSON.stringify(this.shopItems)}`);
+                        }
+
                         console.log('Loaded shop items:', this.shopItems);
                         container.innerHTML = '';
                 
@@ -1281,7 +1286,10 @@ class SpudVerse {
                         }
 
                         itemsInCategory.forEach(item => {
-                            const userItems = Array.isArray(this.gameData.items) ? this.gameData.items : [];
+                            if (!this.gameData || !Array.isArray(this.gameData.items)) {
+                                throw new Error(`gameData.items is not a valid array. Current value: ${JSON.stringify(this.gameData.items)}`);
+                            }
+                            const userItems = this.gameData.items;
                             const ownedItem = userItems.find(i => i.id === item.id);
                             const count = ownedItem ? ownedItem.count : 0;
                             const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
@@ -1314,7 +1322,7 @@ class SpudVerse {
                     }
                 } catch (error) {
                     container.innerHTML = '<div class="error-message">❌ Error loading shop items</div>';
-                    const debugMsg = `JS error loading shop items: ${error?.message || error}`;
+                    const debugMsg = `JS error loading shop items: ${error.message}`;
                     this.showToast(debugMsg, 'error');
                     console.error('Error loading shop items:', error);
                 }
