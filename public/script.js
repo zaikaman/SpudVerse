@@ -1327,14 +1327,17 @@ class SpudVerse {
     }
 
     async buyShopItem(itemId) {
-        if (!this.shopItems || !Array.isArray(this.shopItems)) {
-            this.showToast("Đang tải dữ liệu shop, vui lòng thử lại sau.", "error");
+        // --- Definitive Fix ---
+        // Ensure shopItems is a valid array before proceeding.
+        if (!Array.isArray(this.shopItems)) {
+            this.showToast("Lỗi: Dữ liệu cửa hàng chưa sẵn sàng. Vui lòng thử lại.", "error");
+            console.error("buyShopItem failed: this.shopItems is not an array.", this.shopItems);
             return;
         }
 
         const item = this.shopItems.find(i => i.id === itemId);
         if (!item) {
-            this.showToast("Không tìm thấy item.", "error"); 
+            this.showToast("Không tìm thấy vật phẩm.", "error");
             return;
         }
 
