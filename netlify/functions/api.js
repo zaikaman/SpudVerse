@@ -1,12 +1,12 @@
 const express = require('express');
 const serverless = require('serverless-http');
 const path = require('path');
-const Database = require('../../database/database');
+const SupabaseDatabase = require('../../database/supabase');
 
 const app = express();
 
 // Initialize database
-const db = new Database();
+const db = new SupabaseDatabase();
 
 // Middleware
 app.use(express.json());

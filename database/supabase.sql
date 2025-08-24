@@ -196,15 +196,18 @@ BEGIN
     -- Atomic update with returning the new balance
     UPDATE users 
     SET balance = balance + p_amount,
+        total_farmed = total_farmed + p_amount,
         updated_at = NOW()
     WHERE users.user_id = p_user_id
     RETURNING balance INTO new_balance;
     
     -- If user doesn't exist, create them with the amount
     IF new_balance IS NULL THEN
-        INSERT INTO users (user_id, balance, username, first_name, last_name)
-        VALUES (p_user_id, p_amount, 'User' || p_user_id, 'Unknown', 'User')
-        ON CONFLICT (user_id) DO UPDATE SET balance = users.balance + p_amount
+        INSERT INTO users (user_id, balance, total_farmed, username, first_name, last_name)
+        VALUES (p_user_id, p_amount, p_amount, 'User' || p_user_id, 'Unknown', 'User')
+        ON CONFLICT (user_id) DO UPDATE SET 
+            balance = users.balance + p_amount,
+            total_farmed = users.total_farmed + p_amount
         RETURNING balance INTO new_balance;
     END IF;
     

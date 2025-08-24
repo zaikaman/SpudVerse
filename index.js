@@ -3,7 +3,6 @@ const { Telegraf } = require('telegraf');
 const express = require('express');
 const path = require('path');
 const { TwitterApi } = require('twitter-api-v2');
-const Database = require('./database/database');
 const SupabaseDatabase = require('./database/supabase');
 const {
     getMainKeyboard,
@@ -51,11 +50,9 @@ if (twitterClient) {
 console.log('🔍 Debug - SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'NOT SET');
 console.log('🔍 Debug - SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
 
-const db = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY 
-    ? new SupabaseDatabase() 
-    : new Database();
+const db = new SupabaseDatabase();
 
-console.log(`📊 Database: ${process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY ? 'Supabase' : 'SQLite'}`);
+console.log(`📊 Database: Supabase`);
 
 // Middleware
 app.use(express.json());
