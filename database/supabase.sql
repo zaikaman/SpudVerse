@@ -312,3 +312,57 @@ BEGIN
     );
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function to level up a user
+CREATE OR REPLACE FUNCTION level_up_user(p_user_id BIGINT, p_new_level INTEGER)
+RETURNS JSON AS $$
+DECLARE
+    user_record RECORD;
+    level_info RECORD;
+    levels JSONB := '[
+        {"level": 1, "requiredFarmed": 0, "perTapBonus": 1, "maxEnergyBonus": 100},
+        {"level": 2, "requiredFarmed": 1000, "perTapBonus": 2, "maxEnergyBonus": 150},
+        {"level": 3, "requiredFarmed": 5000, "perTapBonus": 3, "maxEnergyBonus": 200},
+        {"level": 4, "requiredFarmed": 15000, "perTapBonus": 5, "maxEnergyBonus": 250},
+        {"level": 5, "requiredFarmed": 50000, "perTapBonus": 8, "maxEnergyBonus": 350},
+        {"level": 6, "requiredFarmed": 150000, "perTapBonus": 12, "maxEnergyBonus": 500},
+        {"level": 7, "requiredFarmed": 500000, "perTapBonus": 20, "maxEnergyBonus": 750}
+    ]';
+BEGIN
+    -- Get user data
+    SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
+
+    -- Find the level info for the new level
+    SELECT * INTO level_info FROM jsonb_to_recordset(levels) AS x(level INTEGER, requiredFarmed BIGINT, perTapBonus INTEGER, maxEnergyBonus INTEGER) WHERE level = p_new_level;
+
+    IF level_info IS NULL THEN
+        RETURN json_build_object('success', false, 'error', 'Invalid level');
+    END IF;
+
+    -- Check if user has enough farmed total and is at the correct previous level
+    IF user_record.total_farmed >= level_info.requiredFarmed AND user_record.level = p_new_level - 1 THEN
+        -- Update user stats for the new level
+        UPDATE users
+        SET 
+            level = p_new_level,
+            per_tap = level_info.perTapBonus,
+            max_energy = level_info.maxEnergyBonus,
+            energy = level_info.maxEnergyBonus, -- Refill energy
+            updated_at = NOW()
+        WHERE user_id = p_user_id;
+
+        RETURN json_build_object(
+            'success', true,
+            'data', json_build_object(
+                'level', p_new_level,
+                'per_tap', level_info.perTapBonus,
+                'max_energy', level_info.maxEnergyBonus,
+                'energy', level_info.maxEnergyBonus
+            )
+        );
+    ELSE
+        RETURN json_build_object('success', false, 'error', 'Level up requirements not met');
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+

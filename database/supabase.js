@@ -650,6 +650,29 @@ class SupabaseDatabase {
         }
     }
 
+    async levelUpUser(userId, newLevel) {
+        if (!this.client) {
+            return { success: false, error: 'No database connection' };
+        }
+
+        try {
+            const { data, error } = await this.client.rpc('level_up_user', {
+                p_user_id: userId,
+                p_new_level: newLevel
+            });
+
+            if (error) {
+                console.error('Supabase levelUpUser error:', error);
+                return { success: false, error: error.message };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('levelUpUser error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     close() {
         // Supabase client doesn't need explicit closing
         console.log('📡 Supabase connection closed');
