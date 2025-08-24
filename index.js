@@ -1669,6 +1669,120 @@ bot.on('callback_query', async (ctx) => {
 
 
 
+// Shop routes
+app.get('/api/shop', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        // Get available shop items from database
+        const shopItems = await db.getShopItems();
+        
+        // Get user's owned items
+        const userItems = await db.getUserItems(userId);
+        
+        // Combine shop items with user ownership status
+        const itemsWithStatus = shopItems.map(item => ({
+            ...item,
+            owned: userItems.some(userItem => userItem.item_id === item.id)
+        }));
+
+        res.json({
+            success: true,
+            data: itemsWithStatus
+        });
+    } catch (error) {
+        console.error('Shop API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+app.post('/api/shop/buy', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const { itemId } = req.body;
+        if (!itemId) {
+            return res.status(400).json({ success: false, error: 'Item ID is required' });
+        }
+
+        // Get item details
+        const item = await db.getShopItem(itemId);
+        if (!item) {
+            return res.status(404).json({ success: false, error: 'Item not found' });
+        }
+
+        // Check if user already owns the item
+        const userOwnsItem = await db.checkUserOwnsItem(userId, itemId);
+        if (userOwnsItem) {
+            return res.status(400).json({ success: false, error: 'You already own this item' });
+        }
+
+        // Check user balance
+        const user = await db.getUser(userId);
+        if (user.balance < item.price) {
+            return res.status(400).json({ success: false, error: 'Insufficient balance' });
+        }
+
+        // Process purchase
+        const success = await db.purchaseItem(userId, itemId, item.price);
+        if (!success) {
+            return res.status(500).json({ success: false, error: 'Purchase failed' });
+        }
+
+        // Get updated user data
+        const updatedUser = await db.getUser(userId);
+
+        res.json({
+            success: true,
+            data: {
+                item: item,
+                newBalance: updatedUser.balance,
+                message: `Successfully purchased ${item.name}!`
+            }
+        });
+    } catch (error) {
+        console.error('Shop Buy API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+app.post('/api/user/sync-balance', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        // Get latest user data
+        const user = await db.getUser(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const energyData = await db.getUserEnergy(userId);
+
+        res.json({
+            success: true,
+            data: {
+                balance: user.balance,
+                energy: energyData.current_energy,
+                maxEnergy: energyData.max_energy,
+                energyRegenRate: energyData.energy_regen_rate,
+                timeToFull: energyData.time_to_full
+            }
+        });
+    } catch (error) {
+        console.error('Balance Sync API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 // Error handling
 bot.catch((err, ctx) => {
     console.error('Bot error:', err);
