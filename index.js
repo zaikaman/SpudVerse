@@ -1764,10 +1764,10 @@ app.post('/api/shop/buy', async (req, res) => {
             console.log('❌ Shop buy rejected - Item not found:', itemId);
             return res.status(404).json({ success: false, error: 'Item not found' });
         }
-        console.log('✅ Found item:', { id: item.id, name: item.name, price: item.price });
+        console.log('✅ Found item:', { id: item.id, name: item.name, cost: item.cost });
 
         // Process purchase through RPC function
-        console.log('💰 Processing purchase...', { userId, itemId, price: item.price });
+        console.log('💰 Processing purchase...', { userId, itemId, cost: item.cost });
         const result = await db.buyShopItem(userId, itemId);
         console.log('💰 Purchase result:', result);
         
@@ -1777,7 +1777,7 @@ app.post('/api/shop/buy', async (req, res) => {
                 details: result.details,
                 userId,
                 itemId,
-                price: item.price
+                cost: item.cost
             });
             return res.status(400).json({ 
                 success: false, 
