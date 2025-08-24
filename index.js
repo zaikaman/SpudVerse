@@ -866,6 +866,92 @@ app.post('/api/energy/upgrade', async (req, res) => {
     }
 });
 
+// DEBUG: Test referral system endpoint
+app.get('/api/debug/referral-test', async (req, res) => {
+    try {
+        console.log('🔍 DEBUG: Referral test endpoint called');
+        
+        // Test parseReferralCode function
+        const testCases = [
+            '123456',
+            'abc123',
+            '',
+            null,
+            undefined,
+            '999999999'
+        ];
+        
+        const results = testCases.map(testCase => ({
+            input: testCase,
+            output: parseReferralCode(testCase)
+        }));
+        
+        console.log('🧪 parseReferralCode test results:', results);
+        
+        // Test getUserInfoFromRequest with mock data
+        const mockReq = {
+            headers: {
+                authorization: 'tma user=%7B%22id%22%3A12345%2C%22first_name%22%3A%22Test%22%2C%22username%22%3A%22testuser%22%7D&start_param=999888'
+            }
+        };
+        
+        const userInfo = getUserInfoFromRequest(mockReq);
+        console.log('🧪 getUserInfoFromRequest test result:', userInfo);
+        
+        res.json({
+            success: true,
+            data: {
+                parseReferralCodeTests: results,
+                getUserInfoTest: userInfo,
+                message: 'Check server logs for detailed debug info'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Debug referral test error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// DEBUG: Check database referrals
+app.get('/api/debug/check-referrals', async (req, res) => {
+    try {
+        console.log('🔍 DEBUG: Checking all referrals in database');
+        
+        // Get all users
+        const allUsers = await db.getLeaderboard(100); // Get more users
+        console.log('👥 All users count:', allUsers.length);
+        
+        // Check referrals for each user
+        const referralData = [];
+        for (const user of allUsers.slice(0, 10)) { // Check first 10 users
+            const referralCount = await db.getReferralCount(user.user_id);
+            referralData.push({
+                userId: user.user_id,
+                username: user.username,
+                firstName: user.first_name,
+                balance: user.balance,
+                referralCount: referralCount
+            });
+        }
+        
+        console.log('📊 Referral data:', referralData);
+        
+        res.json({
+            success: true,
+            data: {
+                totalUsers: allUsers.length,
+                referralData: referralData,
+                message: 'Check server logs for detailed info'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Debug check referrals error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Helper function to check and complete balance-based missions
 async function checkBalanceMissions(userId, currentBalance) {
     try {
@@ -934,6 +1020,9 @@ function getUserInfoFromRequest(req) {
     if (auth && auth.startsWith('tma ')) {
         try {
             const initData = auth.slice(4);
+            console.log('📊 Raw initData length:', initData.length);
+            console.log('📊 Raw initData (first 200 chars):', initData.substring(0, 200));
+            
             const params = new URLSearchParams(initData);
             
             // Extract user data
@@ -942,8 +1031,14 @@ function getUserInfoFromRequest(req) {
             
             console.log('📊 Telegram Mini App data:', {
                 userFound: !!userStr,
-                startParam: startParam || 'None'
+                startParam: startParam || 'None',
+                allParams: Array.from(params.keys())
             });
+            
+            // Log all parameters for debugging
+            for (const [key, value] of params.entries()) {
+                console.log(`📊 Param ${key}:`, value.substring(0, 100));
+            }
             
             if (userStr) {
                 const user = JSON.parse(userStr);
@@ -960,6 +1055,12 @@ function getUserInfoFromRequest(req) {
                 };
                 
                 console.log('✅ Parsed user info:', userInfo);
+                console.log('🔗 Referral parsing:', {
+                    startParam: startParam,
+                    parsedReferrerId: referrerId,
+                    parseFunction: 'parseReferralCode'
+                });
+                
                 return userInfo;
             }
         } catch (error) {

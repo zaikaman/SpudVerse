@@ -111,6 +111,15 @@ class SpudVerse {
             // Extract referral ID from start_param
             this.referrerId = this.tg.initDataUnsafe?.start_param || null;
             
+            // Debug logging for referral
+            console.log('🔍 Telegram WebApp Debug:', {
+                initDataUnsafe: this.tg.initDataUnsafe,
+                user: this.user,
+                start_param: this.tg.initDataUnsafe?.start_param,
+                referrerId: this.referrerId,
+                initData: this.tg.initData
+            });
+            
             console.log('👤 User:', this.user);
             console.log('🔗 Referral ID:', this.referrerId);
         } else {
