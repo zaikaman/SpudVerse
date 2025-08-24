@@ -1286,10 +1286,8 @@ class SpudVerse {
                         }
 
                         itemsInCategory.forEach(item => {
-                            if (!this.gameData || !Array.isArray(this.gameData.items)) {
-                                throw new Error(`gameData.items is not a valid array. Current value: ${JSON.stringify(this.gameData.items)}`);
-                            }
-                            const userItems = this.gameData.items;
+                            // Defensive check to ensure gameData.items is always an array
+                            const userItems = Array.isArray(this.gameData.items) ? this.gameData.items : [];
                             const ownedItem = userItems.find(i => i.id === item.id);
                             const count = ownedItem ? ownedItem.count : 0;
                             const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
