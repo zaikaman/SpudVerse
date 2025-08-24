@@ -811,6 +811,30 @@ class SupabaseDatabase {
         }
     }
 
+    async getUserItems(userId) {
+        if (!this.client) return [];
+        
+        try {
+            const { data, error } = await this.client
+                .from('user_items')
+                .select(`
+                    *,
+                    shop_items (*)
+                `)
+                .eq('user_id', userId);
+                
+            if (error) {
+                console.error('Supabase getUserItems error:', error);
+                return [];
+            }
+            
+            return data || [];
+        } catch (error) {
+            console.error('getUserItems error:', error);
+            return [];
+        }
+    }
+
     async buyShopItem(userId, itemId) {
         if (!this.client) {
             return { success: false, error: 'No database connection' };
