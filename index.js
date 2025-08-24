@@ -369,6 +369,11 @@ app.post('/api/tap', async (req, res) => {
         await db.updateUserBalance(userId, tapAmount);
         await db.updateLastTapTime(userId, Date.now());
 
+        // Cập nhật streak
+        const streakResult = await db.updateUserStreak(userId);
+        const streak = streakResult?.streak || 0;
+        const bestStreak = streakResult?.best_streak || 0;
+
         // Get updated user stats and check for achievements
         const userStats = await db.getUserStats(userId);
         const newAchievements = await db.checkAndUnlockAchievements(userId, userStats);
@@ -383,6 +388,8 @@ app.post('/api/tap', async (req, res) => {
             energy: energyResult.current_energy,
             maxEnergy: energyResult.max_energy,
             timeToFull: energyResult.time_to_full,
+            streak,
+            bestStreak,
             newAchievements: newAchievements.map(ua => ({
                 id: ua.achievements.id,
                 title: ua.achievements.title,

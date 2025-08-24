@@ -705,6 +705,25 @@ class SupabaseDatabase {
         }
     }
 
+    async updateUserStreak(userId) {
+        if (!this.client) {
+            return { success: false, error: 'No database connection' };
+        }
+        try {
+            const { data, error } = await this.client.rpc('update_user_streak', {
+                p_user_id: userId
+            });
+            if (error) {
+                console.error(`Error in update_user_streak RPC for user ${userId}:`, error);
+                return { success: false, error: error.message };
+            }
+            return data || { success: false, error: 'No data returned' };
+        } catch (err) {
+            console.error(`Unexpected error in updateUserStreak for user ${userId}:`, err);
+            return { success: false, error: 'An unexpected error occurred' };
+        }
+    }
+
     close() {
         // Supabase client doesn't need explicit closing
         console.log('📡 Supabase connection closed');

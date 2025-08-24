@@ -22,6 +22,9 @@ CREATE TABLE IF NOT EXISTS users (
     last_energy_update BIGINT DEFAULT EXTRACT(EPOCH FROM NOW()) * 1000,
     twitter_username TEXT,
     twitter_connected_at TIMESTAMP WITH TIME ZONE,
+    streak INTEGER DEFAULT 0,
+    best_streak INTEGER DEFAULT 0,
+    last_played_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -399,6 +402,66 @@ BEGIN
                 'current_level', user_record.level, 
                 'required_next_level', p_new_level
             )
+        );
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to update user streak
+CREATE OR REPLACE FUNCTION update_user_streak(p_user_id BIGINT)
+RETURNS JSON AS $$
+DECLARE
+    user_record RECORD;
+    new_streak INTEGER;
+    new_best_streak INTEGER;
+    is_new_day BOOLEAN;
+BEGIN
+    -- Get current user data
+    SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
+    
+    IF user_record IS NULL THEN
+        RETURN json_build_object('success', false, 'error', 'user_not_found');
+    END IF;
+
+    -- Check if it's a new day since last play
+    IF user_record.last_played_at IS NULL THEN
+        is_new_day := true;
+    ELSE
+        -- Check if last_played_at was before today
+        is_new_day := user_record.last_played_at < date_trunc('day', NOW());
+    END IF;
+
+    IF is_new_day THEN
+        -- Nếu lần chơi cuối là hôm qua, tăng streak
+        IF user_record.last_played_at IS NOT NULL AND user_record.last_played_at >= date_trunc('day', NOW() - interval '1 day') THEN
+            new_streak := user_record.streak + 1;
+        ELSE
+            -- Nếu không, reset streak về 1
+            new_streak := 1;
+        END IF;
+        
+        -- Cập nhật best_streak nếu streak mới lớn hơn
+        new_best_streak := GREATEST(new_streak, user_record.best_streak);
+        
+        UPDATE users
+        SET 
+            streak = new_streak,
+            best_streak = new_best_streak,
+            last_played_at = NOW(),
+            updated_at = NOW()
+        WHERE user_id = p_user_id;
+        
+        RETURN json_build_object(
+            'success', true,
+            'streak', new_streak,
+            'best_streak', new_best_streak
+        );
+    ELSE
+        -- Nếu chưa sang ngày mới, trả về streak hiện tại
+        RETURN json_build_object(
+            'success', true,
+            'streak', user_record.streak,
+            'best_streak', user_record.best_streak
         );
     END IF;
 END;
