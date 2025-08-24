@@ -101,8 +101,8 @@ class SpudVerse {
             this.tg.enableClosingConfirmation();
             
             // Set theme colors
-            this.tg.setHeaderColor('#667eea');
-            this.tg.setBackgroundColor('#667eea');
+            this.tg.setHeaderColor('#E1F5FE');
+            this.tg.setBackgroundColor('#E1F5FE');
             
             // Get user data
             this.user = this.tg.initDataUnsafe?.user;
