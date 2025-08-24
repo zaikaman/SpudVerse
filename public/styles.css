@@ -1,17 +1,17 @@
 /* SpudVerse Mini App Styles - Meme & Fun Theme */
 
 :root {
-    --primary-color: #ff6b35;
-    --secondary-color: #f7931e;
-    --accent-color: #4ecdc4;
-    --success-color: #45b7d1;
-    --warning-color: #f9ca24;
-    --danger-color: #f0932b;
-    --dark-color: #2c2c54;
-    --light-color: #f8f9fa;
-    --background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --card-shadow: 0 8px 32px rgba(0,0,0,0.1);
-    --border-radius: 16px;
+    --primary-color: #8BC34A; /* Vibrant Green */
+    --secondary-color: #FFC107; /* Sunny Amber */
+    --accent-color: #03A9F4; /* Bright Sky Blue */
+    --success-color: #4CAF50; /* Green for success */
+    --warning-color: #FF9800; /* Orange for warning */
+    --danger-color: #F44336; /* Red for danger */
+    --dark-color: #3E2723; /* Deep Brown for text */
+    --light-color: #FFF8E1; /* Creamy light color */
+    --background: linear-gradient(to bottom, #E1F5FE 0%, #FFFFFF 100%); /* Light Sky to White */
+    --card-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    --border-radius: 20px; /* A bit more rounded */
     --font-primary: 'Comic Neue', cursive;
     --font-title: 'Fredoka One', cursive;
 }
@@ -85,13 +85,12 @@ body {
 
 /* Header */
 .game-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-bottom: 3px solid var(--primary-color);
+    background: transparent; /* Make header transparent */
+    border-bottom: none; /* Remove border */
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: var(--card-shadow);
+    padding-top: env(safe-area-inset-top); /* For iOS notches */
 }
 
 .header-top {
@@ -111,12 +110,12 @@ body {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    background: linear-gradient(45deg, var(--light-color), #ffffff);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 2px solid var(--primary-color);
 }
 
 .avatar-emoji {
@@ -136,13 +135,13 @@ body {
 }
 
 .balance-display {
-    background: linear-gradient(45deg, var(--success-color), var(--accent-color));
+    background: linear-gradient(45deg, var(--secondary-color), #FFD54F); /* Sunny Amber to a lighter shade */
     padding: 0.8rem 1.2rem;
-    border-radius: 25px;
-    color: white;
+    border-radius: 50px; /* Fully rounded */
+    color: var(--dark-color);
     font-weight: 700;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    border: 3px solid white;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+    border: 2px solid white;
 }
 
 .balance-amount {
@@ -168,8 +167,12 @@ body {
 /* Navigation Tabs */
 .nav-tabs {
     display: flex;
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
     padding: 0.5rem;
+    border-radius: 50px; /* Pill-shaped tabs container */
+    margin: 0 1rem; /* Add some horizontal margin */
+    box-shadow: var(--card-shadow);
 }
 
 .nav-tab {
@@ -178,20 +181,20 @@ body {
     border: none;
     background: transparent;
     font-family: var(--font-primary);
-    font-weight: 600;
+    font-weight: 700; /* Bolder font */
     font-size: 0.9rem;
     color: var(--dark-color);
-    border-radius: 12px;
+    border-radius: 30px; /* Pill-shaped tabs */
     transition: all 0.3s ease;
     cursor: pointer;
     position: relative;
 }
 
 .nav-tab.active {
-    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    background: var(--primary-color);
     color: white;
-    box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(139, 195, 74, 0.5);
+    transform: translateY(0); /* Remove translateY on active */
 }
 
 .nav-tab:hover:not(.active) {
@@ -233,8 +236,8 @@ body {
 .farm-title h2 {
     font-family: var(--font-title);
     font-size: 1.8rem;
-    color: var(--primary-color);
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    color: var(--dark-color); /* Changed from primary color */
+    text-shadow: 2px 2px 0px var(--secondary-color); /* Funky shadow */
     margin-bottom: 0.5rem;
 }
 
@@ -252,13 +255,18 @@ body {
 }
 
 .stat-item {
-    background: rgba(255, 255, 255, 0.9);
+    background: #ffffff;
     padding: 1rem;
     border-radius: var(--border-radius);
     text-align: center;
     box-shadow: var(--card-shadow);
-    border: 2px solid transparent;
-    background-clip: padding-box;
+    border: 2px solid var(--light-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
 
 .stat-label {
@@ -279,10 +287,10 @@ body {
 .potato-farm {
     position: relative;
     height: 300px;
-    background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 60%, #90EE90 100%);
+    background: linear-gradient(to bottom, #81D4FA 0%, #A5D6A7 100%); /* Sky blue to soft green */
     border-radius: var(--border-radius);
     border: 4px solid white;
-    box-shadow: var(--card-shadow);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     overflow: hidden;
     margin-bottom: 2rem;
 }
@@ -360,7 +368,7 @@ body {
     left: 0;
     right: 0;
     height: 40px;
-    background: linear-gradient(to bottom, #90EE90, #228B22);
+    background: linear-gradient(to bottom, #A5D6A7, #66BB6A); /* Soft green to a darker shade */
     display: flex;
     align-items: center;
     justify-content: center;
