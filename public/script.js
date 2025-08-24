@@ -1267,52 +1267,56 @@ class SpudVerse {
                 try {
                     // Load shop items from API
                     const response = await this.apiCall('/api/shop', 'GET');
-                    
+            
                     if (response && response.success) {
                         this.shopItems = response.data; // Store all items
                         console.log('Loaded shop items:', this.shopItems);
-                        container.innerHTML = ''; // Clear loading message
-                        
+                        container.innerHTML = '';
+                
                         const itemsInCategory = this.shopItems.filter(item => item.category === category);
                 
-                if (itemsInCategory.length === 0) {
-                    container.innerHTML = '<div class="no-items">No items available in this category</div>';
-                    return;
+                        if (itemsInCategory.length === 0) {
+                            container.innerHTML = '<div class="no-items">No items available in this category</div>';
+                            return;
+                        }
+
+                        itemsInCategory.forEach(item => {
+                            const ownedItem = this.gameData.items.find(i => i.id === item.id);
+                            const count = ownedItem ? ownedItem.count : 0;
+                            const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
+                            const canAfford = this.gameData.balance >= currentCost;
+
+                            const itemCard = document.createElement('div');
+                            itemCard.className = 'item-card';
+                            itemCard.innerHTML = `
+                                <div class="item-icon">${item.icon}</div>
+                                <div class="item-info">
+                                    <div class="item-name">${item.name}</div>
+                                    <div class="item-profit">+${this.formatNumber(item.profit)} SPH</div>
+                                </div>
+                                <div class="item-action">
+                                    <div class="item-count">Owned: ${count}</div>
+                                    <button class="buy-item-btn" 
+                                            onclick="spudverse.buyShopItem(${item.id})"
+                                            ${!canAfford ? 'disabled' : ''}>
+                                        Buy for ${this.formatNumber(currentCost)}
+                                    </button>
+                                </div>
+                            `;
+                            container.appendChild(itemCard);
+                        });
+                    } else {
+                        container.innerHTML = '<div class="error-message">⚠️ Failed to load shop items</div>';
+                        const debugMsg = `Shop API error: ${response?.error || 'Unknown'} | Raw: ${JSON.stringify(response)}`;
+                        this.showToast(debugMsg, 'error');
+                        console.error('Failed to load shop items:', response?.error, response);
+                    }
+                } catch (error) {
+                    container.innerHTML = '<div class="error-message">❌ Error loading shop items</div>';
+                    const debugMsg = `JS error loading shop items: ${error?.message || error}`;
+                    this.showToast(debugMsg, 'error');
+                    console.error('Error loading shop items:', error);
                 }
-
-                itemsInCategory.forEach(item => {
-                    const ownedItem = this.gameData.items.find(i => i.id === item.id);
-                    const count = ownedItem ? ownedItem.count : 0;
-                    const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
-                    const canAfford = this.gameData.balance >= currentCost;
-
-                    const itemCard = document.createElement('div');
-                    itemCard.className = 'item-card';
-                    itemCard.innerHTML = `
-                        <div class="item-icon">${item.icon}</div>
-                        <div class="item-info">
-                            <div class="item-name">${item.name}</div>
-                            <div class="item-profit">+${this.formatNumber(item.profit)} SPH</div>
-                        </div>
-                        <div class="item-action">
-                            <div class="item-count">Owned: ${count}</div>
-                            <button class="buy-item-btn" 
-                                    onclick="spudverse.buyShopItem(${item.id})"
-                                    ${!canAfford ? 'disabled' : ''}>
-                                Buy for ${this.formatNumber(currentCost)}
-                            </button>
-                        </div>
-                    `;
-                    container.appendChild(itemCard);
-                });
-            } else {
-                container.innerHTML = '<div class="error-message">⚠️ Failed to load shop items</div>';
-                console.error('Failed to load shop items:', response?.error);
-            }
-        } catch (error) {
-            container.innerHTML = '<div class="error-message">❌ Error loading shop items</div>';
-            console.error('Error loading shop items:', error);
-        }
     }
 
     async buyShopItem(itemId) {
@@ -1340,11 +1344,13 @@ class SpudVerse {
                 this.loadShopItems();
                 this.showToast(`Purchased ${item.name}!`, 'success');
             } else {
-                this.showToast(response.error || 'Purchase failed', 'error');
+                const debugMsg = `Buy API error: ${response?.error || 'Unknown'} | Raw: ${JSON.stringify(response)}`;
+                this.showToast(debugMsg, 'error');
             }
         } catch (error) {
             console.error('Error buying item:', error);
-            this.showToast('An error occurred during purchase.', 'error');
+            const debugMsg = `JS error during purchase: ${error?.message || error}`;
+            this.showToast(debugMsg, 'error');
         }
     }
 
