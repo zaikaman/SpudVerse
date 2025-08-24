@@ -295,6 +295,7 @@ app.get('/api/user', async (req, res) => {
 
         const referralCount = await db.getReferralCount(userId);
         const energyData = await db.getUserEnergy(userId);
+        const userItems = await db.getUserItems(userId);
         
         // Auto-complete welcome mission if not already completed
         const welcomeMission = await db.getUserMissionProgress(userId, 1);
@@ -326,7 +327,8 @@ app.get('/api/user', async (req, res) => {
                 totalFarmed: user?.total_farmed || 0,
                 referrals: referralCount,
                 streak: user?.streak || 0,
-                bestStreak: user?.best_streak || 0
+                bestStreak: user?.best_streak || 0,
+                items: userItems.map(item => ({ id: item.item_id, count: item.quantity }))
             }
         });
     } catch (error) {
