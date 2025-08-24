@@ -1249,8 +1249,14 @@ class SpudVerse {
         if (!activeCategoryBtn) return;
 
         const category = activeCategoryBtn.dataset.itemCategory;
-        const container = document.getElementById('item-category-' + category);
-                container.innerHTML = '<div class="loading-items">🔄 Loading items...</div>';
+        const categoryId = 'item-category-' + category.replace(/ /g, '-');
+        const container = document.getElementById(categoryId);
+        if (!container) {
+            console.error('Cannot find container for category:', category);
+            console.log('Looking for ID:', categoryId);
+            return;
+        }
+        container.innerHTML = '<div class="loading-items">🔄 Loading items...</div>';
 
                 try {
                     // Load shop items from API
@@ -1259,7 +1265,9 @@ class SpudVerse {
                     if (response && response.success) {
                         this.shopItems = response.data; // Store all items
                         console.log('Loaded shop items:', this.shopItems);
-                        container.innerHTML = ''; // Clear loading message                const itemsInCategory = this.shopItems.filter(item => item.category === category);
+                        container.innerHTML = ''; // Clear loading message
+                        
+                        const itemsInCategory = this.shopItems.filter(item => item.category === category);
                 
                 if (itemsInCategory.length === 0) {
                     container.innerHTML = '<div class="no-items">No items available in this category</div>';
