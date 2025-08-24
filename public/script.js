@@ -13,7 +13,6 @@ class SpudVerse {
             perTap: 1,
             streak: 0,
             combo: 1,
-            totalFarmed: 0,
             referrals: 0,
             missions: [],
             achievements: []
@@ -371,7 +370,6 @@ class SpudVerse {
         // Calculate earned SPUD
         const earnedSpud = Math.floor(this.gameData.perTap * this.gameData.combo);
         this.gameData.balance += earnedSpud;
-        this.gameData.totalFarmed += earnedSpud;
         
         // Reduce energy immediately for responsive UI
         this.gameData.energy = Math.max(0, this.gameData.energy - 1);
@@ -1101,11 +1099,7 @@ class SpudVerse {
             if (response && response.success) {
                 // Update balance from server response
                 const newBalance = response.data.balance;
-                const rewardAmount = newBalance - this.gameData.balance;
                 this.gameData.balance = newBalance;
-                if (rewardAmount > 0) {
-                    this.gameData.totalFarmed += rewardAmount;
-                }
                 this.updateBalance();
                 this.updateFarmStats();
                 
