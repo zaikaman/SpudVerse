@@ -158,7 +158,8 @@ ORDER BY balance DESC;
 -- Create a function to get user stats
 CREATE OR REPLACE FUNCTION get_user_stats(p_user_id BIGINT)
 RETURNS TABLE(
-    balance INTEGER,
+    balance BIGINT,
+    total_farmed BIGINT,
     referral_count BIGINT,
     completed_missions BIGINT,
     rank INTEGER
@@ -167,6 +168,7 @@ BEGIN
     RETURN QUERY
     SELECT 
         u.balance,
+        u.total_farmed,
         COALESCE(r.referral_count, 0) as referral_count,
         COALESCE(m.completed_missions, 0) as completed_missions,
         COALESCE(l.rank::INTEGER, 0) as rank
@@ -361,7 +363,16 @@ BEGIN
             )
         );
     ELSE
-        RETURN json_build_object('success', false, 'error', 'Level up requirements not met');
+        RETURN json_build_object(
+            'success', false, 
+            'error', 'Level up requirements not met',
+            'details', json_build_object(
+                'current_farmed', user_record.total_farmed, 
+                'required_farmed', level_info.requiredFarmed, 
+                'current_level', user_record.level, 
+                'required_next_level', p_new_level
+            )
+        );
     END IF;
 END;
 $$ LANGUAGE plpgsql;

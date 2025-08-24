@@ -662,13 +662,19 @@ class SupabaseDatabase {
             });
 
             if (error) {
-                console.error('Supabase levelUpUser error:', error);
+                console.error('Supabase levelUpUser RPC error:', error);
                 return { success: false, error: error.message };
+            }
+            
+            // The RPC function itself returns a JSON object with a 'success' property
+            if (data && !data.success) {
+                console.warn(`level_up_user check failed for user ${userId}:`, data.error);
+                return { success: false, error: data.error || 'Level up requirements not met' };
             }
 
             return data;
         } catch (error) {
-            console.error('levelUpUser error:', error);
+            console.error('levelUpUser catch error:', error);
             return { success: false, error: error.message };
         }
     }
