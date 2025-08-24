@@ -1701,26 +1701,49 @@ app.get('/api/shop', async (req, res) => {
 
 app.post('/api/shop/buy', async (req, res) => {
     try {
+        console.log('🛍️ Shop buy request received');
+        
         const userId = getUserIdFromRequest(req);
+        console.log('👤 Shop buy - User ID:', userId);
+        
         if (!userId) {
+            console.log('❌ Shop buy rejected - No user ID');
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
         const { itemId } = req.body;
+        console.log('🏷️ Shop buy - Item ID:', itemId);
+        
         if (!itemId) {
+            console.log('❌ Shop buy rejected - No item ID provided');
             return res.status(400).json({ success: false, error: 'Item ID is required' });
         }
 
         // Get all shop items to find the one we want
+        console.log('🔍 Fetching shop items...');
         const shopItems = await db.getShopItems();
+        console.log('📦 Total shop items:', shopItems.length);
+        
         const item = shopItems.find(item => item.id === itemId);
         if (!item) {
+            console.log('❌ Shop buy rejected - Item not found:', itemId);
             return res.status(404).json({ success: false, error: 'Item not found' });
         }
+        console.log('✅ Found item:', { id: item.id, name: item.name, price: item.price });
 
         // Process purchase through RPC function
+        console.log('💰 Processing purchase...', { userId, itemId, price: item.price });
         const result = await db.buyShopItem(userId, itemId);
+        console.log('💰 Purchase result:', result);
+        
         if (!result.success) {
+            console.log('❌ Purchase failed:', {
+                error: result.error,
+                details: result.details,
+                userId,
+                itemId,
+                price: item.price
+            });
             return res.status(400).json({ 
                 success: false, 
                 error: result.error || 'Purchase failed',
@@ -1728,9 +1751,21 @@ app.post('/api/shop/buy', async (req, res) => {
             });
         }
 
+        console.log('✅ Purchase successful!');
+        
         // Get updated user data
+        console.log('📊 Fetching updated user data...');
         const updatedUser = await db.getUser(userId);
         const energyData = await db.getUserEnergy(userId);
+        
+        console.log('📊 Updated user data:', {
+            userId,
+            newBalance: updatedUser.balance,
+            itemId,
+            itemName: item.name,
+            energy: energyData.current_energy,
+            maxEnergy: energyData.max_energy
+        });
 
         res.json({
             success: true,
@@ -1750,32 +1785,76 @@ app.post('/api/shop/buy', async (req, res) => {
 
 app.post('/api/user/sync-balance', async (req, res) => {
     try {
+        console.log('💫 Balance sync request received');
+        
         const userId = getUserIdFromRequest(req);
+        console.log('👤 Balance sync - User ID:', userId);
+        
         if (!userId) {
+            console.log('❌ Balance sync rejected - No user ID');
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
         // Get latest user data
+        console.log('🔄 Fetching latest user data...');
         const user = await db.getUser(userId);
+        
         if (!user) {
+            console.log('❌ Balance sync failed - User not found:', userId);
             return res.status(404).json({ success: false, error: 'User not found' });
         }
+        console.log('👤 Current user data:', {
+            userId: user.user_id,
+            balance: user.balance,
+            level: user.level,
+            lastSync: user.last_sync
+        });
 
+        console.log('⚡ Fetching energy data...');
         const energyData = await db.getUserEnergy(userId);
+        console.log('🔋 Current energy data:', energyData);
+
+        // Try to sync balance if method exists
+        let syncResult = null;
+        try {
+            console.log('🔄 Attempting to sync SPH earnings...');
+            syncResult = await db.syncBalance(userId);
+            console.log('✅ Sync result:', syncResult);
+        } catch (syncError) {
+            console.warn('⚠️ Balance sync warning:', syncError.message);
+        }
+
+        // Get final user data after sync
+        const finalUser = syncResult?.success ? await db.getUser(userId) : user;
+        console.log('📊 Final user data:', {
+            userId: finalUser.user_id,
+            balance: finalUser.balance,
+            syncSuccess: !!syncResult?.success
+        });
 
         res.json({
             success: true,
             data: {
-                balance: user.balance,
+                balance: finalUser.balance,
                 energy: energyData.current_energy,
                 maxEnergy: energyData.max_energy,
                 energyRegenRate: energyData.energy_regen_rate,
-                timeToFull: energyData.time_to_full
+                timeToFull: energyData.time_to_full,
+                syncPerformed: !!syncResult,
+                syncSuccess: !!syncResult?.success
             }
         });
     } catch (error) {
-        console.error('Balance Sync API Error:', error);
-        res.status(500).json({ success: false, error: 'Internal server error' });
+        console.error('❌ Balance Sync API Error:', {
+            message: error.message,
+            stack: error.stack,
+            userId: req.body.userId
+        });
+        res.status(500).json({ 
+            success: false, 
+            error: 'Internal server error',
+            details: error.message
+        });
     }
 });
 
