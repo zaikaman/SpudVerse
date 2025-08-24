@@ -320,10 +320,9 @@ app.get('/api/user', async (req, res) => {
                 maxEnergy: energyData.max_energy,
                 energyRegenRate: energyData.energy_regen_rate,
                 timeToFull: energyData.time_to_full,
-                perTap: 1,
-                streak: 0,
-                combo: 1,
-                totalFarmed: user?.balance || 0,
+                level: user?.level || 1,
+                perTap: user?.per_tap || 1,
+                totalFarmed: user?.total_farmed || 0,
                 referrals: referralCount
             }
         });
@@ -382,6 +381,7 @@ app.post('/api/tap', async (req, res) => {
 
         const responseData = {
             balance: userStats.balance,
+            total_farmed: userStats.total_farmed,
             earned: tapAmount,
             energy: energyResult.current_energy,
             maxEnergy: energyResult.max_energy,
@@ -403,6 +403,34 @@ app.post('/api/tap', async (req, res) => {
         });
     } catch (error) {
         console.error('Tap API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+app.post('/api/user/level-up', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const { newLevel } = req.body;
+
+        const result = await db.levelUpUser(userId, newLevel);
+
+        if (result.success) {
+            res.json({
+                success: true,
+                data: result.data
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error('Level Up API Error:', error);
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
@@ -867,7 +895,7 @@ app.get('/api/leaderboard', async (req, res) => {
             rank: index + 1,
             name: user.username ? `@${user.username}` : user.first_name || 'Anonymous',
             balance: user.balance,
-            level: getLevelFromBalance(user.balance)
+            level: user.level
         }));
 
         let userRank = null;
@@ -1387,17 +1415,6 @@ function getUserInfoFromRequest(req) {
     
     console.log('❌ No valid user info found - all methods failed');
     return null;
-}
-
-// Helper function to get level from balance
-function getLevelFromBalance(balance) {
-    if (balance >= 50000) return '🌟 Legend';
-    if (balance >= 25000) return '🔥 Pro';
-    if (balance >= 15000) return '⭐ Expert';
-    if (balance >= 8000) return '🌱 Advanced';
-    if (balance >= 3000) return '🥔 Skilled';
-    if (balance >= 1000) return '🌿 Regular';
-    return '🌱 Beginner';
 }
 
 // Command /start - Launch Mini App

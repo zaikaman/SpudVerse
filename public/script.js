@@ -57,27 +57,38 @@ class SpudVerse {
         return this.levels.find(l => l.level === this.gameData.level + 1);
     }
 
-    checkForLevelUp() {
+    async checkForLevelUp() {
         const nextLevel = this.getNextLevelInfo();
         if (!nextLevel || this.gameData.totalFarmed < nextLevel.requiredFarmed) {
             return;
         }
 
-        // Level up!
-        this.gameData.level++;
-        const newLevelInfo = this.getCurrentLevelInfo();
+        try {
+            // Call backend to securely level up the user
+            const response = await this.apiCall('/api/user/level-up', 'POST', { newLevel: nextLevel.level });
 
-        // Apply rewards
-        this.gameData.perTap = newLevelInfo.perTapBonus;
-        this.gameData.maxEnergy = newLevelInfo.maxEnergyBonus;
-        this.gameData.energy = this.gameData.maxEnergy; // Refill energy on level up
+            if (response && response.success) {
+                // Update game data with the new values from the server
+                this.gameData.level = response.data.level;
+                this.gameData.perTap = response.data.per_tap;
+                this.gameData.maxEnergy = response.data.max_energy;
+                this.gameData.energy = response.data.energy; // Energy is refilled on level up
 
-        this.updateUI();
-        this.showToast(`🎉 Level Up! You are now Level ${newLevelInfo.level}: ${newLevelInfo.title}`, 'success');
-        this.confettiEffect();
+                // Update UI and show effects
+                this.updateUI();
+                this.showToast(`🎉 Level Up! You are now Level ${response.data.level}: ${this.getCurrentLevelInfo().title}`, 'success');
+                this.confettiEffect();
 
-        // Check again in case of multiple level ups
-        this.checkForLevelUp();
+                // Check again in case of multiple level ups
+                await this.checkForLevelUp();
+            } else {
+                // Log error if level up failed on the backend
+                console.error('Level up failed on server:', response?.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('Error calling level-up API:', error);
+            this.showToast('Could not sync level up. Please try again.', 'error');
+        }
     }
 
     async init() {

@@ -42,17 +42,6 @@ function getUserIdFromRequest(req) {
     return req.query.userId || req.body.userId || 12345;
 }
 
-// Helper function to get level from balance
-function getLevelFromBalance(balance) {
-    if (balance >= 50000) return '🌟 Legend';
-    if (balance >= 25000) return '🔥 Pro';
-    if (balance >= 15000) return '⭐ Expert';
-    if (balance >= 8000) return '🌱 Advanced';
-    if (balance >= 3000) return '🥔 Skilled';
-    if (balance >= 1000) return '🌿 Regular';
-    return '🌱 Beginner';
-}
-
 // API Routes
 app.get('/user', async (req, res) => {
     try {
@@ -68,12 +57,10 @@ app.get('/user', async (req, res) => {
             success: true,
             data: {
                 balance: user?.balance || 0,
-                energy: 100,
-                maxEnergy: 100,
-                perTap: 1,
-                streak: 0,
-                combo: 1,
-                totalFarmed: user?.balance || 0,
+                level: user?.level || 1,
+                per_tap: user?.per_tap || 1,
+                max_energy: user?.max_energy || 100,
+                total_farmed: user?.total_farmed || 0,
                 referrals: referralCount
             }
         });
@@ -91,7 +78,9 @@ app.post('/tap', async (req, res) => {
         }
 
         const { amount } = req.body;
-        await db.updateUserBalance(userId, amount || 1);
+        const tapAmount = amount || 1;
+        await db.updateUserBalance(userId, tapAmount);
+        await db.updateTotalFarmed(userId, tapAmount);
         await db.updateLastTapTime(userId, Date.now());
 
         const user = await db.getUser(userId);
@@ -99,7 +88,8 @@ app.post('/tap', async (req, res) => {
             success: true,
             data: {
                 newBalance: user?.balance || 0,
-                earned: amount || 1
+                totalFarmed: user?.total_farmed || 0,
+                earned: tapAmount
             }
         });
     } catch (error) {
@@ -183,6 +173,34 @@ app.post('/missions/claim', async (req, res) => {
     }
 });
 
+app.post('/user/level-up', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const { newLevel } = req.body;
+
+        const result = await db.levelUpUser(userId, newLevel);
+
+        if (result.success) {
+            res.json({
+                success: true,
+                data: result.data
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error('Level Up API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 app.get('/leaderboard', async (req, res) => {
     try {
         const leaderboard = await db.getLeaderboard(10);
@@ -190,7 +208,7 @@ app.get('/leaderboard', async (req, res) => {
             rank: index + 1,
             name: user.username ? `@${user.username}` : user.first_name || 'Anonymous',
             balance: user.balance,
-            level: getLevelFromBalance(user.balance)
+            level: user.level
         }));
 
         res.json({
