@@ -1,0 +1,24 @@
+/* Welcome Modal Override - Fix Centering Issue */
+.modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 10001 !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+    backdrop-filter: blur(5px) !important;
+}
+
+.modal-overlay .modal {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+}
