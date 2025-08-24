@@ -411,9 +411,8 @@ app.post('/api/user/level-up', async (req, res) => {
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
-        const { newLevel } = req.body;
-
-        const result = await db.levelUpUser(userId, newLevel);
+        // The newLevel is now calculated on the backend
+        const result = await db.levelUpUser(userId);
 
         if (result.success) {
             res.json({
@@ -423,7 +422,8 @@ app.post('/api/user/level-up', async (req, res) => {
         } else {
             res.status(400).json({
                 success: false,
-                error: result.error
+                error: result.error,
+                details: result.details
             });
         }
     } catch (error) {

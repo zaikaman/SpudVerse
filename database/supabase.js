@@ -650,32 +650,55 @@ class SupabaseDatabase {
         }
     }
 
-    async levelUpUser(userId, newLevel) {
+    async levelUpUser(userId) {
         if (!this.client) {
             return { success: false, error: 'No database connection' };
         }
 
         try {
+            // First, get the user's current level and total_farmed
+            const { data: user, error: userError } = await this.client
+                .from('users')
+                .select('level, total_farmed')
+                .eq('user_id', userId)
+                .single();
+
+            if (userError || !user) {
+                console.error(`levelUpUser: Could not retrieve user ${userId}`, userError);
+                return { success: false, error: 'User not found' };
+            }
+
+            const currentLevel = user.level;
+            const newLevel = currentLevel + 1;
+
+            // The SQL function will check if the requirements are met.
             const { data, error } = await this.client.rpc('level_up_user', {
                 p_user_id: userId,
                 p_new_level: newLevel
             });
 
             if (error) {
-                console.error('Supabase levelUpUser RPC error:', error);
+                console.error(`Error in level_up_user RPC for user ${userId}:`, error);
                 return { success: false, error: error.message };
             }
-            
-            // The RPC function itself returns a JSON object with a 'success' property
-            if (data && !data.success) {
-                console.warn(`level_up_user check failed for user ${userId}:`, data.error);
-                return { success: false, error: data.error || 'Level up requirements not met' };
-            }
 
-            return data;
-        } catch (error) {
-            console.error('levelUpUser catch error:', error);
-            return { success: false, error: error.message };
+            if (data && data.success) {
+                console.log(`User ${userId} leveled up to ${newLevel}!`, data.data);
+                return { success: true, data: data.data };
+            } else {
+                // This is expected if the user doesn't meet the requirements for the next level yet.
+                // The previous implementation logged a warning, but it's not really a warning condition.
+                if (data.error === 'Level up requirements not met') {
+                    // This can be uncommented for debugging to see why a user isn't leveling up.
+                    // console.info(`User ${userId} not ready for level ${newLevel}. Details:`, data.details);
+                } else {
+                    console.warn(`level_up_user check failed for user ${userId}:`, data.error, data.details);
+                }
+                return { success: false, error: data.error, details: data.details };
+            }
+        } catch (err) {
+            console.error(`Unexpected error in levelUpUser for user ${userId}:`, err);
+            return { success: false, error: 'An unexpected error occurred' };
         }
     }
 
