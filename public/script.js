@@ -1243,21 +1243,23 @@ class SpudVerse {
 
     shareReferralLink() {
         const userId = this.user?.id || 12345;
-        const referralLink = `https://t.me/spudverse_bot?start=${userId}`;
-        const shareText = `🥔 Join me in SpudVerse! 🌱\n\nTap potatoes, earn SPUD coins, and become a farming legend!\n\nYou'll get 50 SPUD just for joining: ${referralLink}`;
+        const referralCode = userId.toString();
+        const botLink = `https://t.me/spudverse_bot`;
+        const shareText = `🥔 Join me in SpudVerse! 🌱\n\nTap potatoes, earn SPUD coins, and become a farming legend!\n\n🎁 My referral code: ${referralCode}\n\nHow to join:\n1. Click: ${botLink}\n2. Enter my code: ${referralCode}\n3. Get 50 SPUD bonus!\n\nStart farming now! 🚀`;
 
         if (this.tg) {
-            this.tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`);
+            // Share with bot link and referral code
+            this.tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(botLink)}&text=${encodeURIComponent(shareText)}`);
         } else if (navigator.share) {
             navigator.share({
                 title: 'Join SpudVerse!',
                 text: shareText,
-                url: referralLink
+                url: botLink
             });
         } else {
             // Fallback: copy to clipboard
-            navigator.clipboard.writeText(shareText + '\n' + referralLink).then(() => {
-                this.showToast('📋 Referral link copied to clipboard!', 'success');
+            navigator.clipboard.writeText(shareText).then(() => {
+                this.showToast('📋 Referral code and bot link copied to clipboard!', 'success');
             });
         }
     }
@@ -1291,6 +1293,8 @@ class SpudVerse {
                 align-items: center;
                 z-index: 10000;
                 backdrop-filter: blur(5px);
+                padding: 20px;
+                box-sizing: border-box;
             `;
             
             overlay.innerHTML = `
