@@ -1281,7 +1281,8 @@ class SpudVerse {
                         }
 
                         itemsInCategory.forEach(item => {
-                            const ownedItem = this.gameData.items.find(i => i.id === item.id);
+                            const userItems = Array.isArray(this.gameData.items) ? this.gameData.items : [];
+                            const ownedItem = userItems.find(i => i.id === item.id);
                             const count = ownedItem ? ownedItem.count : 0;
                             const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
                             const canAfford = this.gameData.balance >= currentCost;
