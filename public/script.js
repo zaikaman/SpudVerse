@@ -184,27 +184,45 @@ class SpudVerse {
     }
 
     async loadUserData() {
+        console.log('🔄 Loading user data...');
+        console.log('🔍 Debug - User data loading context:', {
+            hasTelegram: !!this.tg,
+            user: this.user,
+            referrerId: this.referrerId,
+            initData: this.tg?.initData?.substring(0, 50) + '...',
+            initDataUnsafe: this.tg?.initDataUnsafe
+        });
+        
         try {
-            console.log('🔄 Loading user data...');
+            console.log('📡 Attempting to call /api/user...');
             
             // Try to fetch from backend API
             const response = await this.apiCall('/api/user', 'GET');
+            console.log('📥 /api/user response:', response);
             
             if (response && response.success) {
-                console.log('✅ API data loaded:', response.data);
+                console.log('✅ API data loaded successfully:', response.data);
                 this.gameData = { ...this.gameData, ...response.data };
                 
                 // Initialize local energy tracking
                 this.lastEnergyUpdate = Date.now();
+                console.log('✅ User data loaded from API');
             } else {
-                console.log('⚠️ API failed, using mock data');
+                console.log('⚠️ API response not successful:', response);
+                console.log('⚠️ Falling back to mock data');
                 this.useMockData();
             }
         } catch (error) {
-            console.log('📡 API error, using local/mock data:', error.message);
+            console.error('❌ API call failed with error:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
+            console.log('📦 Using local/mock data due to API error');
             this.useMockData();
         }
         
+        console.log('🎯 Final game data after loadUserData:', this.gameData);
         this.updateUI();
     }
 
