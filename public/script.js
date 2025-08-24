@@ -403,6 +403,7 @@ class SpudVerse {
 
         // Load tab-specific data
         switch (tabName) {
+            case 'shop':
             case 'upgrades':
                 this.loadUpgrades();
                 break;
