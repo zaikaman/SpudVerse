@@ -1310,7 +1310,7 @@ class SpudVerse {
         
         const joinDate = new Date().toLocaleDateString();
         document.getElementById('join-date').textContent = joinDate;
-        document.getElementById('best-streak').textContent = Math.max(this.gameData.streak, 7); // Mock
+        document.getElementById('best-streak').textContent = this.gameData.bestStreak || 0;
     }
 
     shareReferralLink() {
@@ -1568,7 +1568,7 @@ class SpudVerse {
         try {
             const response = await this.apiCall('/api/tap', 'POST', { amount: amount });
             if (response && response.success) {
-                console.log('✅ Sync successful, server balance:', response.data.balance);
+                console.log('✅ Sync successful, server response:', response.data);
                 
                 // Update energy from server response
                 if (response.data.energy !== undefined) {
@@ -1576,6 +1576,14 @@ class SpudVerse {
                     this.gameData.maxEnergy = response.data.maxEnergy;
                     this.gameData.timeToFull = response.data.timeToFull;
                     this.updateEnergyBar();
+                }
+
+                // Update streak from server response
+                if (response.data.streak !== undefined) {
+                    this.gameData.streak = response.data.streak;
+                }
+                if (response.data.bestStreak !== undefined) {
+                    this.gameData.bestStreak = response.data.bestStreak;
                 }
                 
                 // Handle new achievements
