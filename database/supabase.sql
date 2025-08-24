@@ -260,14 +260,14 @@ BEGIN
 
     -- Update user stats based on upgrade type
     IF p_upgrade_name = 'per_tap' THEN
-        new_value := upgrade_record.base_value + (new_level - 1) * upgrade_record.value_multiplier;
-        UPDATE users SET per_tap = new_value WHERE user_id = p_user_id;
+        -- Increment per_tap instead of replacing it
+        UPDATE users SET per_tap = per_tap + upgrade_record.value_multiplier WHERE user_id = p_user_id;
     ELSIF p_upgrade_name = 'max_energy' THEN
-        new_value := upgrade_record.base_value * POWER(upgrade_record.value_multiplier, new_level - 1);
-        UPDATE users SET max_energy = FLOOR(new_value) WHERE user_id = p_user_id;
+        -- Increment max_energy by a fixed amount per upgrade level
+        UPDATE users SET max_energy = max_energy + 25 WHERE user_id = p_user_id;
     ELSIF p_upgrade_name = 'energy_regen_rate' THEN
-        new_value := upgrade_record.base_value + (new_level - 1) * upgrade_record.value_multiplier;
-        UPDATE users SET energy_regen_rate = new_value WHERE user_id = p_user_id;
+        -- Increment energy_regen_rate instead of replacing it
+        UPDATE users SET energy_regen_rate = energy_regen_rate + upgrade_record.value_multiplier WHERE user_id = p_user_id;
     END IF;
 
     RETURN json_build_object(

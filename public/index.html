@@ -47,10 +47,10 @@
             <!-- Navigation Tabs -->
             <nav class="nav-tabs">
                 <button class="nav-tab active" data-tab="farm">🌱 Farm</button>
-                <button class="nav-tab" data-tab="upgrades">🚀 Upgrades</button>
                 <button class="nav-tab" data-tab="airdrops">🎁 Airdrops</button>
-                <button class="nav-tab" data-tab="leaderboard">🏆 Ranks</button>
+                <button class="nav-tab" data-tab="leaderboard">� Ranks</button>
                 <button class="nav-tab" data-tab="profile">👤 Profile</button>
+                    <button class="nav-tab" data-tab="shop">� Shop</button>
             </nav>
         </header>
 
@@ -106,14 +106,23 @@
                 </div>
             </div>
 
-            <!-- Upgrades Tab -->
-            <div id="upgrades-tab" class="tab-content">
-                <div class="upgrades-header">
-                    <h2>🚀 SPUD UPGRADES</h2>
-                    <p>Spend your SPUD Points to boost your farming power!</p>
+            <!-- Shop Tab -->
+            <div id="shop-tab" class="tab-content">
+                <div class="shop-header">
+                    <h2>🛒 SPUD SHOP</h2>
+                    <p>Upgrade your gear and buy special items!</p>
                 </div>
-                <div class="upgrades-container" id="upgrades-container">
-                    <!-- Upgrades will be loaded here -->
+                <div class="shop-nav">
+                    <button class="shop-nav-btn active" data-subtab="upgrades-sub">🚀 Upgrades</button>
+                    <button class="shop-nav-btn" data-subtab="items-sub">📦 Items</button>
+                </div>
+                <div id="upgrades-sub-tab" class="sub-tab-content active">
+                    <div class="upgrades-container" id="upgrades-container">
+                        <!-- Upgrades will be loaded here -->
+                    </div>
+                </div>
+                <div id="items-sub-tab" class="sub-tab-content">
+                    <p>Items shop coming soon!</p>
                 </div>
             </div>
 

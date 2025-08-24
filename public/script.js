@@ -373,6 +373,17 @@ class SpudVerse {
 
         // Prevent context menu on potato
         megaPotato.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Shop sub-tabs
+        document.querySelectorAll('.shop-nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.shop-nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const subtab = btn.dataset.subtab;
+                document.querySelectorAll('.sub-tab-content').forEach(st => st.classList.remove('active'));
+                document.getElementById(subtab + '-tab').classList.add('active');
+            });
+        });
     }
 
     switchTab(tabName) {
