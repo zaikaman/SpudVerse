@@ -343,7 +343,8 @@ body {
 }
 
 .potato-main {
-    font-size: 6rem;
+    width: 150px; /* Adjust size as needed */
+    height: auto;
     filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3));
     transition: all 0.1s ease;
 }
