@@ -437,13 +437,15 @@ class SpudVerse {
 
     animatePotato() {
         const potato = document.querySelector('.potato-main');
+        potato.src = 'sad_potato_astronaut.png'; // Change to sad potato
         potato.style.transform = 'scale(0.95)';
         potato.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.3)) brightness(1.2)';
         
         setTimeout(() => {
+            potato.src = 'potato_astronaut.png'; // Change back to normal
             potato.style.transform = 'scale(1)';
             potato.style.filter = 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))';
-        }, 100);
+        }, 150); // A slightly longer delay to see the sad potato
     }
 
     createFloatingSpud(event, amount) {
