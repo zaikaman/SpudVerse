@@ -289,6 +289,10 @@ app.get('/api/user', async (req, res) => {
             });
         }
 
+        // Update streak on user load
+        await db.updateUserStreak(userId);
+        user = await db.getUser(userId); // Re-fetch user to get updated streak
+
         const referralCount = await db.getReferralCount(userId);
         const energyData = await db.getUserEnergy(userId);
         
@@ -320,7 +324,9 @@ app.get('/api/user', async (req, res) => {
                 level: user?.level || 1,
                 perTap: user?.per_tap || 1,
                 totalFarmed: user?.total_farmed || 0,
-                referrals: referralCount
+                referrals: referralCount,
+                streak: user?.streak || 0,
+                bestStreak: user?.best_streak || 0
             }
         });
     } catch (error) {
@@ -369,11 +375,6 @@ app.post('/api/tap', async (req, res) => {
         await db.updateUserBalance(userId, tapAmount);
         await db.updateLastTapTime(userId, Date.now());
 
-        // Cập nhật streak
-        const streakResult = await db.updateUserStreak(userId);
-        const streak = streakResult?.streak || 0;
-        const bestStreak = streakResult?.best_streak || 0;
-
         // Get updated user stats and check for achievements
         const userStats = await db.getUserStats(userId);
         const newAchievements = await db.checkAndUnlockAchievements(userId, userStats);
@@ -388,8 +389,6 @@ app.post('/api/tap', async (req, res) => {
             energy: energyResult.current_energy,
             maxEnergy: energyResult.max_energy,
             timeToFull: energyResult.time_to_full,
-            streak,
-            bestStreak,
             newAchievements: newAchievements.map(ua => ({
                 id: ua.achievements.id,
                 title: ua.achievements.title,
