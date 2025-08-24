@@ -149,41 +149,71 @@ app.get('/api/user', async (req, res) => {
                 console.log('🎁 Processing referral bonus:', { referrerId, userId });
                 
                 try {
-                    // Step 1: Add referral record
-                    console.log('📝 Step 1: Adding referral record...');
-                    const referralResult = await db.addReferral(referrerId, userId);
-                    console.log('📝 Referral record result:', referralResult);
+                    // Step 0: Check if referral already exists to prevent duplicates
+                    console.log('🔍 Step 0: Checking for existing referral...');
+                    let existingReferral = null;
                     
-                    // Step 2: Update referrer balance
-                    const referrerBonus = parseInt(process.env.REFERRAL_BONUS) || 100;
-                    console.log(`💰 Step 2: Updating referrer ${referrerId} balance by +${referrerBonus} SPUD`);
-                    const referrerUpdateResult = await db.updateUserBalance(referrerId, referrerBonus);
-                    console.log('💰 Referrer balance update result:', referrerUpdateResult);
-                    
-                    // Step 3: Update referred user balance
-                    const referredBonus = 50;
-                    console.log(`💰 Step 3: Updating referred user ${userId} balance by +${referredBonus} SPUD`);
-                    const referredUpdateResult = await db.updateUserBalance(userId, referredBonus);
-                    console.log('💰 Referred user balance update result:', referredUpdateResult);
-                    
-                    // Step 4: Verify balances were updated
-                    const referrerUser = await db.getUser(referrerId);
-                    const referredUser = await db.getUser(userId);
-                    console.log('🔍 Post-bonus verification:', {
-                        referrerBalance: referrerUser?.balance,
-                        referredBalance: referredUser?.balance
-                    });
-                    
-                    // Try to send notification to referrer (via bot if available)
-                    try {
-                        if (bot.telegram) {
-                            await bot.telegram.sendMessage(referrerId, 
-                                `${EMOJIS.tada} You just earned ${referrerBonus} SPUD from inviting a friend! ${EMOJIS.money}`
-                            );
-                            console.log('📱 Notification sent to referrer');
+                    if (db.client) {
+                        // For Supabase, check directly
+                        const { data, error } = await db.client
+                            .from('referrals')
+                            .select('*')
+                            .eq('referrer_id', referrerId)
+                            .eq('referred_id', userId)
+                            .single();
+                            
+                        if (!error) {
+                            existingReferral = data;
                         }
-                    } catch (err) {
-                        console.log('📱 Cannot send referral notification:', err.message);
+                    }
+                    
+                    if (existingReferral) {
+                        console.log('⚠️ Referral already exists, skipping bonus:', existingReferral);
+                        // Don't return here - continue with user creation but skip referral bonus
+                    } else {
+                        console.log('✅ No existing referral found, proceeding with bonus...');
+                        
+                        // Step 1: Add referral record
+                        console.log('📝 Step 1: Adding referral record...');
+                        const referralResult = await db.addReferral(referrerId, userId);
+                        console.log('📝 Referral record result:', referralResult);
+                        
+                        // Only proceed with bonus if referral record was successfully created
+                        if (referralResult) {
+                            // Step 2: Update referrer balance
+                            const referrerBonus = parseInt(process.env.REFERRAL_BONUS) || 100;
+                            console.log(`💰 Step 2: Updating referrer ${referrerId} balance by +${referrerBonus} SPUD`);
+                            const referrerUpdateResult = await db.updateUserBalance(referrerId, referrerBonus);
+                            console.log('💰 Referrer balance update result:', referrerUpdateResult);
+                            
+                            // Step 3: Update referred user balance
+                            const referredBonus = 50;
+                            console.log(`💰 Step 3: Updating referred user ${userId} balance by +${referredBonus} SPUD`);
+                            const referredUpdateResult = await db.updateUserBalance(userId, referredBonus);
+                            console.log('💰 Referred user balance update result:', referredUpdateResult);
+                            
+                            // Step 4: Verify balances were updated
+                            const referrerUser = await db.getUser(referrerId);
+                            const referredUser = await db.getUser(userId);
+                            console.log('🔍 Post-bonus verification:', {
+                                referrerBalance: referrerUser?.balance,
+                                referredBalance: referredUser?.balance
+                            });
+                            
+                            // Try to send notification to referrer (via bot if available)
+                            try {
+                                if (bot.telegram) {
+                                    await bot.telegram.sendMessage(referrerId, 
+                                        `${EMOJIS.tada} You just earned ${referrerBonus} SPUD from inviting a friend! ${EMOJIS.money}`
+                                    );
+                                    console.log('📱 Notification sent to referrer');
+                                }
+                            } catch (err) {
+                                console.log('📱 Cannot send referral notification:', err.message);
+                            }
+                        } else {
+                            console.log('❌ Failed to create referral record, skipping bonus');
+                        }
                     }
                     
                 } catch (referralError) {
