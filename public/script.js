@@ -185,6 +185,8 @@ class SpudVerse {
 
     async loadUserData() {
         console.log('🔄 Loading user data...');
+        this.showDebugToast('🔄 Loading user data...', 'info');
+        
         console.log('🔍 Debug - User data loading context:', {
             hasTelegram: !!this.tg,
             user: this.user,
@@ -194,6 +196,7 @@ class SpudVerse {
         
         try {
             console.log('📡 Attempting to call /api/user...');
+            this.showDebugToast('📡 Calling /api/user...', 'info');
             
             // Try to fetch from backend API
             const response = await this.apiCall('/api/user', 'GET');
@@ -202,8 +205,11 @@ class SpudVerse {
             console.log('📥 /api/user response success:', response?.success);
             console.log('📥 /api/user response error:', response?.error);
             
+            this.showDebugToast(`📥 Response: ${JSON.stringify(response)}`, 'info');
+            
             if (response && response.success) {
                 console.log('✅ API data loaded successfully:', response.data);
+                this.showDebugToast('✅ User data loaded from API', 'success');
                 this.gameData = { ...this.gameData, ...response.data };
                 
                 // Initialize local energy tracking
@@ -218,14 +224,18 @@ class SpudVerse {
                     isNewUser: response?.isNewUser
                 });
                 
+                this.showDebugToast('⚠️ API not successful - checking if new user', 'warning');
+                
                 // Check if this is a new user (404 or specific error)
                 if (response && (response.error === 'User not found' || response.isNewUser)) {
                     console.log('🆕 New user detected from response, showing welcome modal');
+                    this.showDebugToast('🆕 NEW USER DETECTED! Showing welcome modal', 'success');
                     await this.showWelcomeModal();
                     return; // Don't continue until user completes welcome
                 }
                 
                 console.log('⚠️ Falling back to mock data');
+                this.showDebugToast('⚠️ Using mock data', 'warning');
                 this.useMockData();
             }
         } catch (error) {
@@ -235,6 +245,8 @@ class SpudVerse {
                 name: error.name,
                 response: error.response
             });
+            
+            this.showDebugToast(`❌ API Error: ${error.message}`, 'error');
             
             // Enhanced error checking
             const errorMessage = error.message.toLowerCase();
@@ -251,11 +263,13 @@ class SpudVerse {
             
             if (isNewUserError) {
                 console.log('🆕 New user detected (from error), showing welcome modal');
+                this.showDebugToast('🆕 NEW USER (from error)! Showing welcome modal', 'success');
                 await this.showWelcomeModal();
                 return;
             }
             
             console.log('📦 Using local/mock data due to API error');
+            this.showDebugToast('📦 Using mock data due to error', 'warning');
             this.useMockData();
         }
         
@@ -1632,6 +1646,72 @@ class SpudVerse {
             toast.style.animation = 'slideOut 0.3s ease forwards';
             setTimeout(() => toast.remove(), 300);
         }, 3000);
+    }
+
+    showDebugToast(message, type = 'info') {
+        // Create debug toast container if it doesn't exist
+        let debugContainer = document.getElementById('debug-toast-container');
+        if (!debugContainer) {
+            debugContainer = document.createElement('div');
+            debugContainer.id = 'debug-toast-container';
+            debugContainer.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                z-index: 99999;
+                pointer-events: none;
+                font-family: monospace;
+                font-size: 12px;
+            `;
+            document.body.appendChild(debugContainer);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `debug-toast ${type}`;
+        toast.style.cssText = `
+            background: ${type === 'error' ? '#ff4444' : type === 'warning' ? '#ff8844' : type === 'success' ? '#44ff88' : '#4488ff'};
+            color: white;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            word-wrap: break-word;
+            max-width: 100%;
+            opacity: 0.9;
+            animation: debugSlideIn 0.3s ease-out;
+        `;
+        toast.textContent = message;
+
+        // Add CSS animation if not exists
+        if (!document.querySelector('#debug-toast-style')) {
+            const style = document.createElement('style');
+            style.id = 'debug-toast-style';
+            style.textContent = `
+                @keyframes debugSlideIn {
+                    from { transform: translateX(-100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 0.9; }
+                }
+                @keyframes debugSlideOut {
+                    from { transform: translateX(0); opacity: 0.9; }
+                    to { transform: translateX(-100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        debugContainer.appendChild(toast);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            toast.style.animation = 'debugSlideOut 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 5000);
+
+        // Keep only last 5 debug toasts
+        const toasts = debugContainer.children;
+        if (toasts.length > 5) {
+            toasts[0].remove();
+        }
     }
 
     // Debug mode - show detailed errors in app
