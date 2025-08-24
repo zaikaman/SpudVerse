@@ -407,19 +407,23 @@ app.post('/api/tap', async (req, res) => {
 app.post('/api/user/level-up', async (req, res) => {
     try {
         const userId = getUserIdFromRequest(req);
+        console.log(`🌟 Level up attempt for user: ${userId}`);
+
         if (!userId) {
+            console.log('❌ Level up failed: Unauthorized');
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
-        // The newLevel is now calculated on the backend
         const result = await db.levelUpUser(userId);
 
         if (result.success) {
+            console.log(`✅ User ${userId} leveled up successfully. Data:`, result.data);
             res.json({
                 success: true,
                 data: result.data
             });
         } else {
+            console.log(`❌ Level up failed for user ${userId}:`, { error: result.error, details: result.details });
             res.status(400).json({
                 success: false,
                 error: result.error,
