@@ -807,6 +807,16 @@ body {
     font-size: 1.1rem;
 }
 
+.rank-level {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--primary-color);
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+
 .user-rank {
     background: rgba(255, 255, 255, 0.95);
     border-radius: var(--border-radius);

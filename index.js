@@ -907,15 +907,18 @@ app.get('/api/leaderboard', async (req, res) => {
 
         let userRank = null;
         let userBalance = 0;
+        let userLevel = 1;
 
         // Get user's rank and balance if user is authenticated
         if (userId) {
             try {
+                const user = await db.getUser(userId);
                 const userStats = await db.getUserStats(userId);
                 userRank = userStats.rank || null;
                 userBalance = userStats.balance || 0;
+                userLevel = user?.level || 1;
                 
-                console.log(`📊 User ${userId} rank: ${userRank}, balance: ${userBalance}`);
+                console.log(`📊 User ${userId} rank: ${userRank}, balance: ${userBalance}, level: ${userLevel}`);
             } catch (error) {
                 console.warn('⚠️ Could not get user stats for leaderboard:', error.message);
             }
@@ -925,8 +928,11 @@ app.get('/api/leaderboard', async (req, res) => {
             success: true,
             data: {
                 leaderboard: formattedLeaderboard,
-                userRank: userRank,
-                userBalance: userBalance
+                userRank: {
+                    rank: userRank,
+                    balance: userBalance,
+                    level: userLevel
+                }
             }
         });
     } catch (error) {

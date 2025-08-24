@@ -1348,8 +1348,7 @@ class SpudVerse {
 
         // Handle both old format (array) and new format (object with leaderboard array)
         const leaderboard = Array.isArray(data) ? data : data.leaderboard || [];
-        const userRank = data.userRank || null;
-        const userBalance = data.userBalance || this.gameData.balance || 0;
+        const userRankInfo = data.userRank || null;
 
         leaderboard.forEach((player, index) => {
             const item = document.createElement('div');
@@ -1377,23 +1376,27 @@ class SpudVerse {
         // Update user's rank - use real data from API or show "Unranked"
         const userRankElement = document.getElementById('user-rank');
         const userBalanceElement = document.getElementById('user-balance-rank');
+        const userLevelElement = document.getElementById('user-level-rank');
         
         if (userRankElement) {
-            if (userRank && userRank > 0) {
-                userRankElement.textContent = userRank;
+            if (userRankInfo && userRankInfo.rank > 0) {
+                userRankElement.textContent = `#${userRankInfo.rank}`;
             } else {
                 userRankElement.textContent = 'Unranked';
             }
         }
         
         if (userBalanceElement) {
-            userBalanceElement.textContent = this.formatNumber(userBalance);
+            userBalanceElement.textContent = this.formatNumber(userRankInfo?.balance || 0);
+        }
+
+        if (userLevelElement) {
+            userLevelElement.textContent = this.getLevelTitle(userRankInfo?.level || 1);
         }
 
         console.log('📊 Leaderboard rendered:', {
             leaderboardCount: leaderboard.length,
-            userRank: userRank,
-            userBalance: userBalance
+            userRankInfo: userRankInfo
         });
     }
 

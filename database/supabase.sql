@@ -153,6 +153,7 @@ SELECT
     first_name,
     last_name,
     balance,
+    level,
     ROW_NUMBER() OVER (ORDER BY balance DESC) as rank
 FROM users
 WHERE balance > 0
