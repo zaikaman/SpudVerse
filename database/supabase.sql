@@ -158,6 +158,162 @@ FROM users
 WHERE balance > 0
 ORDER BY balance DESC;
 
+-- Create upgrades table
+CREATE TABLE IF NOT EXISTS upgrades (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    base_cost BIGINT DEFAULT 100,
+    cost_multiplier REAL DEFAULT 1.5,
+    base_value REAL DEFAULT 1,
+    value_multiplier REAL DEFAULT 1.2,
+    max_level INTEGER DEFAULT 10,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create user_upgrades table
+CREATE TABLE IF NOT EXISTS user_upgrades (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(user_id),
+    upgrade_id INTEGER NOT NULL REFERENCES upgrades(id),
+    level INTEGER DEFAULT 0,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, upgrade_id)
+);
+
+-- Insert default upgrades
+INSERT INTO upgrades (name, description, base_cost, cost_multiplier, base_value, value_multiplier, max_level) VALUES
+('per_tap', 'Increase SPUD earned per tap', 100, 1.8, 1, 1, 20),
+('max_energy', 'Increase maximum energy capacity', 150, 2.0, 100, 1.2, 15),
+('energy_regen_rate', 'Increase energy regeneration speed', 200, 2.2, 1, 1, 10)
+ON CONFLICT (name) DO NOTHING;
+
+-- Create indexes for upgrades
+CREATE INDEX IF NOT EXISTS idx_user_upgrades_user_upgrade ON user_upgrades(user_id, upgrade_id);
+
+-- Function to calculate upgrade cost
+CREATE OR REPLACE FUNCTION get_upgrade_cost(p_upgrade_name TEXT, p_level INTEGER)
+RETURNS BIGINT AS $$
+DECLARE
+    upgrade_record RECORD;
+BEGIN
+    SELECT * INTO upgrade_record FROM upgrades WHERE name = p_upgrade_name;
+    IF upgrade_record IS NULL THEN
+        RETURN -1; -- Indicates error
+    END IF;
+    RETURN FLOOR(upgrade_record.base_cost * POWER(upgrade_record.cost_multiplier, p_level));
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to purchase an upgrade
+CREATE OR REPLACE FUNCTION purchase_upgrade(p_user_id BIGINT, p_upgrade_name TEXT)
+RETURNS JSON AS $$
+DECLARE
+    user_record RECORD;
+    upgrade_record RECORD;
+    user_upgrade_record RECORD;
+    current_level INTEGER;
+    cost BIGINT;
+    new_level INTEGER;
+    new_value REAL;
+BEGIN
+    -- Get user, upgrade, and user_upgrade info
+    SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
+    SELECT * INTO upgrade_record FROM upgrades WHERE name = p_upgrade_name;
+    SELECT * INTO user_upgrade_record FROM user_upgrades WHERE user_id = p_user_id AND upgrade_id = upgrade_record.id;
+
+    IF user_record IS NULL OR upgrade_record IS NULL THEN
+        RETURN json_build_object('success', false, 'error', 'invalid_data');
+    END IF;
+
+    -- Determine current level
+    IF user_upgrade_record IS NULL THEN
+        current_level := 0;
+    ELSE
+        current_level := user_upgrade_record.level;
+    END IF;
+
+    -- Check max level
+    IF current_level >= upgrade_record.max_level THEN
+        RETURN json_build_object('success', false, 'error', 'max_level_reached');
+    END IF;
+
+    -- Calculate cost for next level
+    new_level := current_level + 1;
+    cost := get_upgrade_cost(p_upgrade_name, current_level);
+
+    -- Check if user has enough balance
+    IF user_record.balance < cost THEN
+        RETURN json_build_object('success', false, 'error', 'insufficient_balance', 'required', cost);
+    END IF;
+
+    -- Deduct cost and update user_upgrades
+    UPDATE users SET balance = balance - cost WHERE user_id = p_user_id;
+
+    IF user_upgrade_record IS NULL THEN
+        INSERT INTO user_upgrades (user_id, upgrade_id, level)
+        VALUES (p_user_id, upgrade_record.id, new_level);
+    ELSE
+        UPDATE user_upgrades SET level = new_level, updated_at = NOW()
+        WHERE id = user_upgrade_record.id;
+    END IF;
+
+    -- Update user stats based on upgrade type
+    IF p_upgrade_name = 'per_tap' THEN
+        new_value := upgrade_record.base_value + (new_level - 1) * upgrade_record.value_multiplier;
+        UPDATE users SET per_tap = new_value WHERE user_id = p_user_id;
+    ELSIF p_upgrade_name = 'max_energy' THEN
+        new_value := upgrade_record.base_value * POWER(upgrade_record.value_multiplier, new_level - 1);
+        UPDATE users SET max_energy = FLOOR(new_value) WHERE user_id = p_user_id;
+    ELSIF p_upgrade_name = 'energy_regen_rate' THEN
+        new_value := upgrade_record.base_value + (new_level - 1) * upgrade_record.value_multiplier;
+        UPDATE users SET energy_regen_rate = new_value WHERE user_id = p_user_id;
+    END IF;
+
+    RETURN json_build_object(
+        'success', true,
+        'new_level', new_level,
+        'cost', cost,
+        'new_balance', user_record.balance - cost
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get all upgrades for a user with current level and next level cost
+CREATE OR REPLACE FUNCTION get_user_upgrades_with_costs(p_user_id BIGINT)
+RETURNS TABLE(
+    id INTEGER,
+    name TEXT,
+    description TEXT,
+    base_cost BIGINT,
+    cost_multiplier REAL,
+    max_level INTEGER,
+    current_level INTEGER,
+    next_level_cost BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        u.id,
+        u.name,
+        u.description,
+        u.base_cost,
+        u.cost_multiplier,
+        u.max_level,
+        COALESCE(uu.level, 0) as current_level,
+        CASE
+            WHEN COALESCE(uu.level, 0) >= u.max_level THEN -1 -- -1 indicates max level reached
+            ELSE get_upgrade_cost(u.name, COALESCE(uu.level, 0))
+        END as next_level_cost
+    FROM
+        upgrades u
+    LEFT JOIN
+        user_upgrades uu ON u.id = uu.upgrade_id AND uu.user_id = p_user_id
+    ORDER BY
+        u.id;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Create a function to get user stats
 CREATE OR REPLACE FUNCTION get_user_stats(p_user_id BIGINT)
 RETURNS TABLE(

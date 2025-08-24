@@ -221,4 +221,45 @@ app.get('/leaderboard', async (req, res) => {
     }
 });
 
+// Upgrades routes
+app.get('/api/upgrades', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const upgrades = await db.getUpgrades(userId);
+        res.json({ success: true, data: upgrades });
+    } catch (error) {
+        console.error('Upgrades API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+app.post('/api/upgrades/purchase', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const { upgradeName } = req.body;
+        if (!upgradeName) {
+            return res.status(400).json({ success: false, error: 'Upgrade name is required' });
+        }
+
+        const result = await db.purchaseUpgrade(userId, upgradeName);
+        
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error) {
+        console.error('Purchase Upgrade API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 module.exports.handler = serverless(app);

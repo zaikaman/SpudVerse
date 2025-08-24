@@ -540,6 +540,61 @@ class SupabaseDatabase {
         }
     }
 
+    // Upgrade methods
+    async getUpgrades(userId) {
+        if (!this.client) {
+            // Mock data for upgrades
+            return [
+                { id: 1, name: 'per_tap', description: 'Increase SPUD earned per tap', base_cost: 100, cost_multiplier: 1.8, max_level: 20, current_level: 0, next_level_cost: 100 },
+                { id: 2, name: 'max_energy', description: 'Increase maximum energy capacity', base_cost: 150, cost_multiplier: 2.0, max_level: 15, current_level: 0, next_level_cost: 150 },
+                { id: 3, name: 'energy_regen_rate', description: 'Increase energy regeneration speed', base_cost: 200, cost_multiplier: 2.2, max_level: 10, current_level: 0, next_level_cost: 200 },
+            ];
+        }
+
+        try {
+            const { data, error } = await this.client.rpc('get_user_upgrades_with_costs', { p_user_id: userId });
+
+            if (error) {
+                console.error('Supabase getUpgrades error:', error);
+                return [];
+            }
+
+            return data || [];
+        } catch (error) {
+            console.error('getUpgrades error:', error);
+            return [];
+        }
+    }
+
+    async purchaseUpgrade(userId, upgradeName) {
+        if (!this.client) {
+            return { success: false, error: 'No database connection' };
+        }
+        
+        try {
+            const { data, error } = await this.client
+                .rpc('purchase_upgrade', { 
+                    p_user_id: userId, 
+                    p_upgrade_name: upgradeName 
+                });
+                
+            if (error) {
+                console.error('Supabase purchaseUpgrade error:', error);
+                return { success: false, error: error.message, details: error.details };
+            }
+            
+            // The RPC function now returns a JSON object with success status
+            if (data && data.success) {
+                return data;
+            } else {
+                return data || { success: false, error: 'Unknown error during upgrade' };
+            }
+        } catch (error) {
+            console.error('purchaseUpgrade error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     // Real-time subscription for leaderboard
     subscribeToLeaderboard(callback) {
         if (!this.client) return null;

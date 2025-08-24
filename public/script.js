@@ -392,6 +392,9 @@ class SpudVerse {
 
         // Load tab-specific data
         switch (tabName) {
+            case 'upgrades':
+                this.loadUpgrades();
+                break;
             case 'airdrops':
                 this.loadMissions();
                 break;
@@ -1209,6 +1212,87 @@ class SpudVerse {
         } finally {
             // Always clear the claiming flag
             mission._claiming = false;
+        }
+    }
+
+    async loadUpgrades() {
+        try {
+            const response = await this.apiCall('/api/upgrades', 'GET');
+            if (response.success) {
+                this.renderUpgrades(response.data);
+            } else {
+                this.showToast('Could not load upgrades.', 'error');
+            }
+        } catch (error) {
+            console.error('Error loading upgrades:', error);
+            this.showToast('Failed to load upgrades. Please try again.', 'error');
+        }
+    }
+
+    renderUpgrades(upgrades) {
+        const container = document.getElementById('upgrades-container');
+        container.innerHTML = '';
+
+        const icons = {
+            per_tap: '👆',
+            max_energy: '🔋',
+            energy_regen_rate: '⚡️'
+        };
+
+        upgrades.forEach(upgrade => {
+            const card = document.createElement('div');
+            card.className = 'upgrade-card';
+
+            const isMaxLevel = upgrade.current_level >= upgrade.max_level;
+            const canAfford = this.gameData.balance >= upgrade.next_level_cost;
+
+            card.innerHTML = `
+                <div class="upgrade-icon">${icons[upgrade.name] || '🚀'}</div>
+                <div class="upgrade-info">
+                    <div class="upgrade-title">${upgrade.description}</div>
+                    <div class="upgrade-level">Level: ${upgrade.current_level} / ${upgrade.max_level}</div>
+                </div>
+                <div class="upgrade-action">
+                    <button class="upgrade-btn" id="upgrade-btn-${upgrade.id}" 
+                        onclick="spudverse.purchaseUpgrade('${upgrade.name}', ${upgrade.id})" 
+                        ${isMaxLevel || !canAfford ? 'disabled' : ''}>
+                        ${isMaxLevel ? 'Max Level' : `Upgrade`}
+                    </button>
+                    <div class="upgrade-cost">
+                        ${isMaxLevel ? '' : `Cost: ${this.formatNumber(upgrade.next_level_cost)} SPUD`}
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    async purchaseUpgrade(upgradeName, upgradeId) {
+        const button = document.getElementById(`upgrade-btn-${upgradeId}`);
+        button.disabled = true;
+        button.textContent = 'Upgrading...';
+
+        try {
+            const response = await this.apiCall('/api/upgrades/purchase', 'POST', { upgradeName });
+
+            if (response.success) {
+                this.showToast(`🚀 ${upgradeName.replace('_', ' ')} upgraded!`, 'success');
+                this.gameData.balance = response.new_balance;
+                this.updateBalance();
+                // Reload upgrades to show new levels and costs
+                this.loadUpgrades();
+                // Also update user stats on other tabs
+                this.updateUI();
+            } else {
+                this.showToast(response.error || 'Upgrade failed', 'error');
+                button.disabled = false;
+                button.textContent = 'Upgrade';
+            }
+        } catch (error) {
+            console.error('Error purchasing upgrade:', error);
+            this.showToast('Upgrade failed. Please try again.', 'error');
+            button.disabled = false;
+            button.textContent = 'Upgrade';
         }
     }
 

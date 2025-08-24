@@ -441,6 +441,103 @@ body {
     font-size: 0.9rem;
 }
 
+/* Upgrades Tab */
+.upgrades-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.upgrades-header h2 {
+    font-family: var(--font-title);
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.upgrades-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.upgrade-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+    border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.upgrade-icon {
+    font-size: 2.5rem;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--accent-color), var(--primary-color));
+    color: white;
+}
+
+.upgrade-info {
+    flex: 1;
+}
+
+.upgrade-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--dark-color);
+    margin-bottom: 0.3rem;
+}
+
+.upgrade-desc {
+    color: var(--dark-color);
+    opacity: 0.8;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.upgrade-level {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+}
+
+.upgrade-action {
+    text-align: right;
+}
+
+.upgrade-btn {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 25px;
+    font-family: var(--font-primary);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.upgrade-btn:disabled {
+    background: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.upgrade-cost {
+    font-size: 0.8rem;
+    color: var(--dark-color);
+    opacity: 0.7;
+    margin-top: 0.3rem;
+}
+
 /* Airdrops Tab */
 .airdrops-header {
     text-align: center;
