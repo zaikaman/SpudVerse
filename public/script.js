@@ -1256,6 +1256,8 @@ class SpudVerse {
             console.log('Looking for ID:', categoryId);
             return;
         }
+        
+        // Show loading state
         container.innerHTML = `
             <div class="potato-loading">
                 <div class="potato-spinner"></div>
@@ -1264,7 +1266,9 @@ class SpudVerse {
             </div>
         `;
 
-                try {
+        try {
+            // Reset shop items first
+            this.shopItems = [];
                     // Load shop items from API
                     const response = await this.apiCall('/api/shop', 'GET');
             
@@ -1327,17 +1331,28 @@ class SpudVerse {
     }
 
     async buyShopItem(itemId) {
-        // --- Definitive Fix ---
-        // Ensure shopItems is a valid array before proceeding.
-        if (!Array.isArray(this.shopItems)) {
-            this.showToast("Lỗi: Dữ liệu cửa hàng chưa sẵn sàng. Vui lòng thử lại.", "error");
-            console.error("buyShopItem failed: this.shopItems is not an array.", this.shopItems);
+        // Kiểm tra và tải lại dữ liệu shop nếu cần
+        if (!Array.isArray(this.shopItems) || this.shopItems.length === 0) {
+            this.showToast("Đang tải lại dữ liệu cửa hàng...", "info");
+            const activeCategoryBtn = document.querySelector('.item-shop-nav-btn.active');
+            if (activeCategoryBtn) {
+                await this.loadShopItems();
+            } else {
+                this.showToast("Lỗi: Không thể xác định danh mục cửa hàng", "error");
+                return;
+            }
+        }
+
+        // Kiểm tra lại sau khi tải
+        if (!Array.isArray(this.shopItems) || this.shopItems.length === 0) {
+            this.showToast("Lỗi: Không thể tải dữ liệu cửa hàng. Vui lòng thử lại", "error");
+            console.error("buyShopItem failed: Shop items not available after reload", this.shopItems);
             return;
         }
 
         const item = this.shopItems.find(i => i.id === itemId);
         if (!item) {
-            this.showToast("Không tìm thấy vật phẩm.", "error");
+            this.showToast("Không tìm thấy vật phẩm trong cửa hàng", "error");
             return;
         }
 
