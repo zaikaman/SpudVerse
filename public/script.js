@@ -1331,7 +1331,9 @@ class SpudVerse {
             return;
         }
 
-        const ownedItem = this.gameData.items.find(i => i.id === item.id);
+        const ownedItem = Array.isArray(this.gameData.items) 
+            ? this.gameData.items.find(i => i.id === item.id) 
+            : null;
         const count = ownedItem ? ownedItem.count : 0;
         const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
 
