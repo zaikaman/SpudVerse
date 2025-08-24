@@ -1101,8 +1101,14 @@ class SpudVerse {
             
             if (response && response.success) {
                 // Update balance from server response
-                this.gameData.balance = response.data.balance;
+                const newBalance = response.data.balance;
+                const rewardAmount = newBalance - this.gameData.balance;
+                this.gameData.balance = newBalance;
+                if (rewardAmount > 0) {
+                    this.gameData.totalFarmed += rewardAmount;
+                }
                 this.updateBalance();
+                this.updateFarmStats();
                 
                 // Reload missions from API to get updated status
                 console.log(`🔄 Reloading missions after claim for mission ${missionId}`);
@@ -1516,8 +1522,6 @@ class SpudVerse {
                             
                             // Award achievement reward
                             if (achievement.reward > 0) {
-                                this.gameData.balance += achievement.reward;
-                                this.updateBalance();
                                 this.showToast(`🎁 Achievement reward: +${achievement.reward} SPUD!`, 'success');
                             }
                         }
@@ -1525,8 +1529,14 @@ class SpudVerse {
                 }
                 
                 // Update balance from server
-                this.gameData.balance = response.data.balance;
+                const newBalance = response.data.balance;
+                const balanceIncrease = newBalance - this.gameData.balance;
+                if (balanceIncrease > 0) {
+                    this.gameData.totalFarmed += balanceIncrease;
+                }
+                this.gameData.balance = newBalance;
                 this.updateBalance();
+                this.updateFarmStats();
             } else {
                 console.warn('⚠️ Sync failed, adding back to pending');
                 this.pendingTaps += amount; // Add back if failed
