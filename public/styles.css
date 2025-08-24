@@ -40,7 +40,7 @@ body {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(45deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+    background: var(--background); /* Use the new background */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -52,9 +52,10 @@ body {
 }
 
 .potato-bounce {
-    font-size: 4rem;
-    animation: bounce 1s infinite;
-    margin-bottom: 1rem;
+    width: 100px; /* Adjust size as needed */
+    height: auto;
+    animation: bounce 1.5s infinite;
+    margin-bottom: 1.5rem;
 }
 
 @keyframes bounce {
