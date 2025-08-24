@@ -392,7 +392,8 @@ class SpudVerse {
                 btn.classList.add('active');
                 const category = btn.dataset.itemCategory;
                 document.querySelectorAll('.item-category-content').forEach(cc => cc.classList.remove('active'));
-                document.getElementById('item-category-' + category).classList.add('active');
+                const categoryId = 'item-category-' + category.replace(/ /g, '-');
+                document.getElementById(categoryId).classList.add('active');
                 this.loadShopItems();
             });
         });
