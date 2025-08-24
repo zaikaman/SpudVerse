@@ -564,6 +564,23 @@ class SpudVerse {
                 console.warn('⚠️ Backend energy sync failed, using local calculation');
             }
         }, 10000); // 10 seconds
+        
+        // FALLBACK: Try to call /api/user once after 5 seconds if it wasn't called during loadUserData
+        setTimeout(async () => {
+            console.log('🔄 FALLBACK: Attempting delayed /api/user call...');
+            try {
+                const response = await this.apiCall('/api/user', 'GET');
+                if (response && response.success) {
+                    console.log('✅ FALLBACK: /api/user successful:', response.data);
+                    this.gameData = { ...this.gameData, ...response.data };
+                    this.updateUI();
+                } else {
+                    console.log('⚠️ FALLBACK: /api/user failed:', response);
+                }
+            } catch (error) {
+                console.error('❌ FALLBACK: /api/user error:', error);
+            }
+        }, 5000);
     }
 
     stopEnergyRegen() {
