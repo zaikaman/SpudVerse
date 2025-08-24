@@ -69,6 +69,10 @@
                             <span class="stat-label">Per Tap</span>
                             <span class="stat-value">+<span id="per-tap">1</span> SPUD Points 🔥</span>
                         </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Per Hour</span>
+                            <span class="stat-value">+<span id="sph">0</span> SPUD Points  passively  passively</span>
+                        </div>
                     </div>
 
                     <div class="potato-farm">
@@ -122,7 +126,28 @@
                     </div>
                 </div>
                 <div id="items-sub-tab" class="sub-tab-content">
-                    <p>Items shop coming soon!</p>
+                    <div class="item-shop-nav">
+                        <button class="item-shop-nav-btn active" data-item-category="potato-land">Potato Land</button>
+                        <button class="item-shop-nav-btn" data-item-category="potato-city">Potato City</button>
+                        <button class="item-shop-nav-btn" data-item-category="potato-nation">Potato Nation</button>
+                        <button class="item-shop-nav-btn" data-item-category="potato-world">Potato World</button>
+                        <button class="item-shop-nav-btn" data-item-category="potato-galaxy">Potato Galaxy</button>
+                    </div>
+                    <div id="item-category-potato-land" class="item-category-content active">
+                        <!-- Items for Potato Land will be loaded here -->
+                    </div>
+                    <div id="item-category-potato-city" class="item-category-content">
+                        <!-- Items for Potato City will be loaded here -->
+                    </div>
+                    <div id="item-category-potato-nation" class="item-category-content">
+                        <!-- Items for Potato Nation will be loaded here -->
+                    </div>
+                    <div id="item-category-potato-world" class="item-category-content">
+                        <!-- Items for Potato World will be loaded here -->
+                    </div>
+                    <div id="item-category-potato-galaxy" class="item-category-content">
+                        <!-- Items for Potato Galaxy will be loaded here -->
+                    </div>
                 </div>
             </div>
 
@@ -184,6 +209,14 @@
                         <div class="stat-info">
                             <div class="stat-number" id="profile-referrals">0</div>
                             <div class="stat-label">Friends Invited</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">⚙️</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="profile-sph">0</div>
+                            <div class="stat-label">SPUD Points Per Hour</div>
                         </div>
                     </div>
                     

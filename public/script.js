@@ -17,7 +17,9 @@ class SpudVerse {
             totalFarmed: 0,
             referrals: 0,
             missions: [],
-            achievements: []
+            achievements: [],
+            sph: 0,
+            items: []
         };
         this.currentTab = 'farm';
         this.tapCount = 0;
@@ -44,6 +46,54 @@ class SpudVerse {
             { level: 5, requiredFarmed: 50000, perTapBonus: 8, maxEnergyBonus: 350, title: 'Potato Baron 👑' },
             { level: 6, requiredFarmed: 150000, perTapBonus: 12, maxEnergyBonus: 500, title: 'Spud-nik Explorer 🧑‍🚀' },
             { level: 7, requiredFarmed: 500000, perTapBonus: 20, maxEnergyBonus: 750, title: 'Legendary Spud Master 🌟' }
+        ];
+
+        this.shopItems = [
+            // Potato Land
+            { id: 1, name: 'Wooden Shovel', cost: 10, profit: 1, scaling: 1.5, icon: '🪣', category: 'potato-land' },
+            { id: 2, name: 'Rusty Hoe', cost: 20, profit: 3, scaling: 1.5, icon: '🏡', category: 'potato-land' },
+            { id: 3, name: 'Small Basket', cost: 50, profit: 6, scaling: 1.5, icon: '🛒', category: 'potato-land' },
+            { id: 4, name: 'Iron Spade', cost: 100, profit: 12, scaling: 1.5, icon: '🥔', category: 'potato-land' },
+            { id: 5, name: 'Handcart', cost: 250, profit: 25, scaling: 1.5, icon: '⚙️', category: 'potato-land' },
+            { id: 6, name: 'Watering Can', cost: 500, profit: 60, scaling: 1.5, icon: '🚜', category: 'potato-land' },
+            { id: 7, name: 'Wooden Wheelbarrow', cost: 1200, profit: 120, scaling: 1.5, icon: '🎉', category: 'potato-land' },
+            { id: 8, name: 'Basic Fertilizer', cost: 2500, profit: 300, scaling: 1.5, icon: '🗿', category: 'potato-land' },
+            // Potato City
+            { id: 9, name: 'Iron Hoe', cost: 5000, profit: 600, scaling: 1.5, icon: '🛍', category: 'potato-city' },
+            { id: 10, name: 'Strong Basket', cost: 10000, profit: 1200, scaling: 1.5, icon: '🌭', category: 'potato-city' },
+            { id: 11, name: 'Iron Wheelbarrow', cost: 25000, profit: 2500, scaling: 1.5, icon: '🍴', category: 'potato-city' },
+            { id: 12, name: 'Better Fertilizer', cost: 50000, profit: 6000, scaling: 1.5, icon: '🚚', category: 'potato-city' },
+            { id: 13, name: 'Wooden Tractor', cost: 120000, profit: 12000, scaling: 1.5, icon: '🏭', category: 'potato-city' },
+            { id: 14, name: 'Steel Shovel', cost: 250000, profit: 25000, scaling: 1.5, icon: '🗼', category: 'potato-city' },
+            { id: 15, name: 'Motor Cart', cost: 500000, profit: 60000, scaling: 1.5, icon: '🚇', category: 'potato-city' },
+            { id: 16, name: 'Steel Hoe', cost: 1000000, profit: 120000, scaling: 1.5, icon: '🏢', category: 'potato-city' },
+            // Potato Nation
+            { id: 17, name: 'Sprinkler System', cost: 2500000, profit: 300000, scaling: 1.5, icon: '🎓', category: 'potato-nation' },
+            { id: 18, name: 'Big Tractor', cost: 5000000, profit: 600000, scaling: 1.5, icon: '🏦', category: 'potato-nation' },
+            { id: 19, name: 'Modern Fertilizer', cost: 10000000, profit: 1200000, scaling: 1.5, icon: '🏛', category: 'potato-nation' },
+            { id: 20, name: 'Potato Harvester', cost: 25000000, profit: 2500000, scaling: 1.5, icon: '📺', category: 'potato-nation' },
+            { id: 21, name: 'Industrial Spade', cost: 50000000, profit: 6000000, scaling: 1.5, icon: '🚂', category: 'potato-nation' },
+            { id: 22, name: 'Advanced Cart', cost: 100000000, profit: 12000000, scaling: 1.5, icon: '🪖', category: 'potato-nation' },
+            { id: 23, name: 'Automated Sprayer', cost: 250000000, profit: 25000000, scaling: 1.5, icon: '✈️', category: 'potato-nation' },
+            { id: 24, name: 'Mega Tractor', cost: 500000000, profit: 60000000, scaling: 1.5, icon: '☢️', category: 'potato-nation' },
+            // Potato World
+            { id: 25, name: 'Super Fertilizer', cost: 1000000000, profit: 120000000, scaling: 1.5, icon: '💻', category: 'potato-world' },
+            { id: 26, name: 'Potato Factory', cost: 2500000000, profit: 300000000, scaling: 1.5, icon: '🖥', category: 'potato-world' },
+            { id: 27, name: 'Titanium Hoe', cost: 5000000000, profit: 600000000, scaling: 1.5, icon: '📈', category: 'potato-world' },
+            { id: 28, name: 'Drone Planter', cost: 10000000000, profit: 1200000000, scaling: 1.5, icon: '🚀', category: 'potato-world' },
+            { id: 29, name: 'Nano Fertilizer', cost: 25000000000, profit: 2500000000, scaling: 1.5, icon: '🤖', category: 'potato-world' },
+            { id: 30, name: 'Autonomous Tractor', cost: 50000000000, profit: 6000000000, scaling: 1.5, icon: '⛏', category: 'potato-world' },
+            { id: 31, name: 'Smart Irrigation', cost: 100000000000, profit: 12000000000, scaling: 1.5, icon: '🌐', category: 'potato-world' },
+            { id: 32, name: 'Space Greenhouse', cost: 250000000000, profit: 25000000000, scaling: 1.5, icon: '⏳', category: 'potato-world' },
+            // Potato Galaxy
+            { id: 33, name: 'AI Farmer Bot', cost: 500000000000, profit: 60000000000, scaling: 1.5, icon: '🌕', category: 'potato-galaxy' },
+            { id: 34, name: 'Quantum Hoe', cost: 1000000000000, profit: 120000000000, scaling: 1.5, icon: '🪐', category: 'potato-galaxy' },
+            { id: 35, name: 'Terraform Machine', cost: 2500000000000, profit: 300000000000, scaling: 1.5, icon: '🛰', category: 'potato-galaxy' },
+            { id: 36, name: 'Wormhole Seeder', cost: 5000000000000, profit: 600000000000, scaling: 1.5, icon: '⚡', category: 'potato-galaxy' },
+            { id: 37, name: 'Nano Factory', cost: 10000000000000, profit: 1200000000000, scaling: 1.5, icon: '🌀', category: 'potato-galaxy' },
+            { id: 38, name: 'Potato Multiverse', cost: 25000000000000, profit: 2500000000000, scaling: 1.5, icon: '👑', category: 'potato-galaxy' },
+            { id: 39, name: 'Time Travel Tractor', cost: 50000000000000, profit: 6000000000000, scaling: 1.5, icon: '☀️', category: 'potato-galaxy' },
+            { id: 40, name: 'Godly Potato Field', cost: 100000000000000, profit: 12000000000000, scaling: 1.5, icon: '🌌', category: 'potato-galaxy' },
         ];
         
         this.init();
@@ -122,6 +172,9 @@ class SpudVerse {
             // Start energy regeneration
             this.startEnergyRegen();
             
+            // Start SPH interval
+            this.startSPHInterval();
+
             // Hide loading and show game
             this.hideLoading();
             
@@ -246,51 +299,41 @@ class SpudVerse {
     }
 
     async loadUserData() {
-        console.log('🔄 Loading user data...');
+        console.log('🔄 Loading user data from Supabase...');
         
         try {
-            // Try to fetch from backend API
             const response = await this.apiCall('/api/user', 'GET');
             
             if (response && response.success) {
-                console.log('✅ API data loaded successfully:', response.data);
-                this.gameData = { ...this.gameData, ...response.data };
+                console.log('✅ Supabase data loaded successfully:', response.data);
                 
-                // Initialize local energy tracking
+                // Map Supabase data to gameData structure
+                this.gameData.balance = response.data.balance || 0;
+                this.gameData.energy = response.data.energy || 100;
+                this.gameData.maxEnergy = response.data.max_energy || 100;
+                this.gameData.energyRegenRate = response.data.energy_regen_rate || 1;
+                this.gameData.perTap = response.data.per_tap || 1;
+                this.gameData.level = response.data.level || 1;
+                this.gameData.totalFarmed = response.data.total_farmed || 0;
+                this.gameData.sph = response.data.sph || 0;
+                this.gameData.items = response.data.items || [];
+                this.gameData.streak = response.data.streak || 0;
+                this.gameData.bestStreak = response.data.best_streak || 0;
+
                 this.lastEnergyUpdate = Date.now();
             } else {
-                // Check if this is a new user (404 or specific error)
-                if (response && (
-                    response.error === 'User not found' || 
-                    response.isNewUser ||
-                    (response.error && response.error.includes('404')) ||
-                    (response.error && response.error.includes('HTTP error! status: 404'))
-                )) {
+                if (response && (response.error === 'User not found' || response.status === 404)) {
                     console.log('🆕 New user detected, showing welcome modal');
                     await this.showWelcomeModal();
-                    return; // Don't continue until user completes welcome
+                    return;
                 }
                 
-                console.log('⚠️ Falling back to mock data');
+                console.warn('⚠️ Could not load user data from Supabase, falling back to mock data.', response?.error);
                 this.useMockData();
             }
         } catch (error) {
-            console.error('❌ API call failed with error:', error);
-            
-            // Enhanced error checking
-            const errorMessage = error.message.toLowerCase();
-            const isNewUserError = errorMessage.includes('404') || 
-                                 errorMessage.includes('401') || 
-                                 errorMessage.includes('unauthorized') || 
-                                 errorMessage.includes('user not found');
-            
-            if (isNewUserError) {
-                console.log('🆕 New user detected (from error), showing welcome modal');
-                await this.showWelcomeModal();
-                return;
-            }
-            
-            console.log('📦 Using local/mock data due to API error');
+            console.error('❌ API call to /api/user failed:', error);
+            this.showToast('Could not connect to the server. Using offline mode.', 'error');
             this.useMockData();
         }
         
@@ -321,25 +364,22 @@ class SpudVerse {
     }
 
     useMockData() {
-        // Use mock data when API fails
-        const savedData = localStorage.getItem('spudverse_data');
-        if (savedData) {
-            this.gameData = { ...this.gameData, ...JSON.parse(savedData) };
-        } else {
-            // Default mock data
-            this.gameData = {
-                ...this.gameData,
-                balance: 0,
-                energy: 100,
-                maxEnergy: 100,
-                perTap: 1,
-                streak: 0,
-                combo: 1,
-                totalFarmed: 0,
-                referrals: 0
-            };
-        }
-        console.log('📦 Using mock data:', this.gameData);
+        // Use mock data when API fails or for development
+        console.log('📦 Using default mock data as fallback.');
+        this.gameData = {
+            ...this.gameData,
+            balance: 0,
+            energy: 100,
+            maxEnergy: 100,
+            perTap: 1,
+            streak: 0,
+            combo: 1,
+            totalFarmed: 0,
+            referrals: 0,
+            sph: 0,
+            items: []
+        };
+        console.log('📦 Mock data loaded:', this.gameData);
     }
 
     setupEventListeners() {
@@ -390,6 +430,18 @@ class SpudVerse {
                 document.getElementById(subtab + '-tab').classList.add('active');
             });
         });
+
+        // Item shop category tabs
+        document.querySelectorAll('.item-shop-nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.item-shop-nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const category = btn.dataset.itemCategory;
+                document.querySelectorAll('.item-category-content').forEach(cc => cc.classList.remove('active'));
+                document.getElementById('item-category-' + category).classList.add('active');
+                this.loadShopItems();
+            });
+        });
     }
 
     switchTab(tabName) {
@@ -410,6 +462,9 @@ class SpudVerse {
         // Load tab-specific data
         switch (tabName) {
             case 'shop':
+                this.loadUpgrades();
+                this.loadShopItems();
+                break;
             case 'upgrades':
                 this.loadUpgrades();
                 break;
@@ -554,6 +609,7 @@ class SpudVerse {
         document.getElementById('per-tap').textContent = this.gameData.perTap;
         document.getElementById('combo').textContent = this.gameData.combo.toFixed(1);
         document.getElementById('streak').textContent = this.gameData.streak;
+        document.getElementById('sph').textContent = this.formatNumber(this.gameData.sph);
     }
 
     updateEnergyBar() {
@@ -1233,6 +1289,92 @@ class SpudVerse {
         }
     }
 
+    loadShopItems() {
+        const activeCategoryBtn = document.querySelector('.item-shop-nav-btn.active');
+        if (!activeCategoryBtn) return;
+
+        const category = activeCategoryBtn.dataset.itemCategory;
+        const container = document.getElementById('item-category-' + category);
+        container.innerHTML = '';
+
+        const itemsInCategory = this.shopItems.filter(item => item.category === category);
+
+        itemsInCategory.forEach(item => {
+            const ownedItem = this.gameData.items.find(i => i.id === item.id);
+            const count = ownedItem ? ownedItem.count : 0;
+            const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
+            const canAfford = this.gameData.balance >= currentCost;
+
+            const itemCard = document.createElement('div');
+            itemCard.className = 'item-card';
+            itemCard.innerHTML = `
+                <div class="item-icon">${item.icon}</div>
+                <div class="item-info">
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-profit">+${this.formatNumber(item.profit)} SPH</div>
+                </div>
+                <div class="item-action">
+                    <div class="item-count">Owned: ${count}</div>
+                    <button class="buy-item-btn" 
+                            onclick="spudverse.buyShopItem(${item.id})"
+                            ${!canAfford ? 'disabled' : ''}>
+                        Buy for ${this.formatNumber(currentCost)}
+                    </button>
+                </div>
+            `;
+            container.appendChild(itemCard);
+        });
+    }
+
+    async buyShopItem(itemId) {
+        const item = this.shopItems.find(i => i.id === itemId);
+        if (!item) return;
+
+        const ownedItem = this.gameData.items.find(i => i.id === item.id);
+        const count = ownedItem ? ownedItem.count : 0;
+        const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
+
+        if (this.gameData.balance < currentCost) {
+            this.showToast("You don't have enough SPUD Points!", "error");
+            return;
+        }
+
+        try {
+            const response = await this.apiCall('/api/shop/buy', 'POST', { itemId });
+
+            if (response && response.success) {
+                this.gameData.balance = response.data.balance;
+                this.gameData.sph = response.data.sph;
+                this.gameData.items = response.data.items;
+
+                this.updateUI();
+                this.loadShopItems();
+                this.showToast(`Purchased ${item.name}!`, 'success');
+            } else {
+                this.showToast(response.error || 'Purchase failed', 'error');
+            }
+        } catch (error) {
+            console.error('Error buying item:', error);
+            this.showToast('An error occurred during purchase.', 'error');
+        }
+    }
+
+    startSPHInterval() {
+        setInterval(async () => {
+            // SPH is now calculated and added on the backend.
+            // This interval will periodically sync the balance from the server.
+            try {
+                const response = await this.apiCall('/api/user/sync-balance', 'GET');
+                if (response && response.success) {
+                    this.gameData.balance = response.data.balance;
+                    this.updateBalance();
+                }
+            } catch (error) {
+                console.warn('Could not sync balance for SPH update.', error);
+            }
+        }, 60000); // Sync every 60 seconds
+    }
+
     async loadUpgrades() {
         try {
             const response = await this.apiCall('/api/upgrades', 'GET');
@@ -1410,6 +1552,7 @@ class SpudVerse {
         
         document.getElementById('profile-balance').textContent = this.formatNumber(this.gameData.balance);
         document.getElementById('profile-referrals').textContent = this.gameData.referrals;
+        document.getElementById('profile-sph').textContent = this.formatNumber(this.gameData.sph);
         document.getElementById('profile-missions').textContent = 
             this.gameData.missions.filter(m => m.claimed).length;
         
@@ -1911,7 +2054,9 @@ class SpudVerse {
     }
 
     saveProgress() {
-        localStorage.setItem('spudverse_data', JSON.stringify(this.gameData));
+        // This method is now deprecated as we are using Supabase.
+        // Kept for potential offline mode in the future.
+        // console.log('💾 Progress is now saved to Supabase, not localStorage.');
     }
 
     async apiCall(endpoint, method = 'GET', data = null) {

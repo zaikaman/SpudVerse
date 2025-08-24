@@ -1297,3 +1297,94 @@ body {
     color: #333;
     transform: translateY(-1px);
 }
+
+.item-shop-nav {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.item-shop-nav-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 20px;
+    font-family: var(--font-primary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    background: #f0f0f0;
+    color: var(--dark-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.item-shop-nav-btn.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.item-category-content {
+    display: none;
+}
+
+.item-category-content.active {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    animation: fadeIn 0.5s ease;
+}
+
+.item-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.item-icon {
+    font-size: 2rem;
+}
+
+.item-info {
+    flex: 1;
+}
+
+.item-name {
+    font-weight: 700;
+}
+
+.item-profit {
+    font-size: 0.9rem;
+    color: var(--success-color);
+}
+
+.item-action {
+    text-align: right;
+}
+
+.item-count {
+    font-size: 0.8rem;
+    color: var(--dark-color);
+    opacity: 0.7;
+    margin-bottom: 0.3rem;
+}
+
+.buy-item-btn {
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 15px;
+    font-family: var(--font-primary);
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--secondary-color);
+    color: var(--dark-color);
+}
+
+.buy-item-btn:disabled {
+    background: #e0e0e0;
+    cursor: not-allowed;
+}
