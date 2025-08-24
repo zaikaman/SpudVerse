@@ -470,7 +470,6 @@ class SpudVerse {
 
     updateFarmStats() {
         document.getElementById('per-tap').textContent = this.gameData.perTap;
-        document.getElementById('total-farmed').textContent = this.formatNumber(this.gameData.totalFarmed);
         document.getElementById('combo').textContent = this.gameData.combo.toFixed(1);
         document.getElementById('streak').textContent = this.gameData.streak;
     }
@@ -1894,4 +1893,5 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
     }
+});
 });
