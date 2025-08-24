@@ -57,6 +57,12 @@ class SpudVerse {
         return this.levels.find(l => l.level === this.gameData.level + 1);
     }
 
+    getLevelTitle(level) {
+        if (level === null || level === undefined) return 'Spud Follower';
+        const levelInfo = this.levels.find(l => l.level === level);
+        return levelInfo ? levelInfo.title : 'Spud Follower';
+    }
+
     async checkForLevelUp() {
         const nextLevel = this.getNextLevelInfo();
         if (!nextLevel || this.gameData.totalFarmed < nextLevel.requiredFarmed) {
@@ -1359,7 +1365,7 @@ class SpudVerse {
                     <div class="rank-number ${rankClass}">${player.rank}</div>
                     <div class="player-info">
                         <div class="player-name">${player.name}</div>
-                        <div class="player-level">${player.level}</div>
+                        <div class="player-level">${this.getLevelTitle(player.level)}</div>
                     </div>
                 </div>
                 <div class="player-score">${this.formatNumber(player.balance)} SPUD Points</div>
