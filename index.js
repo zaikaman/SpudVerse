@@ -1694,7 +1694,7 @@ app.get('/api/shop', async (req, res) => {
         console.log('🛍️ User owned items:', userItems?.length || 0);
         console.log('🛍️ User items details:', userItems);
         
-        // Combine shop items with user ownership status
+        // Combine shop items with user ownership status and sort
         console.log('🔄 Combining shop and user items...');
         const itemsWithStatus = shopItems.map(item => {
             const isOwned = userItems.some(userItem => userItem.item_id === item.id);
@@ -1703,6 +1703,15 @@ app.get('/api/shop', async (req, res) => {
                 ...item,
                 owned: isOwned
             };
+        });
+
+        // Sort items by category and cost
+        itemsWithStatus.sort((a, b) => {
+            // First sort by category
+            if (a.category < b.category) return -1;
+            if (a.category > b.category) return 1;
+            // Then sort by cost within each category
+            return a.cost - b.cost;
         });
 
         console.log('✅ Sending response with items:', {
