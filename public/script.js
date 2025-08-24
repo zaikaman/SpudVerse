@@ -1249,17 +1249,16 @@ class SpudVerse {
 
         const category = activeCategoryBtn.dataset.itemCategory;
         const container = document.getElementById('item-category-' + category);
-        container.innerHTML = '<div class="loading-items">🔄 Loading items...</div>';
+                container.innerHTML = '<div class="loading-items">🔄 Loading items...</div>';
 
-        try {
-            // Load shop items from API
-            const response = await this.apiCall('/api/shop', 'GET');
-            
-            if (response && response.success) {
-                this.shopItems = response.data; // Store all items
-                container.innerHTML = ''; // Clear loading message
-
-                const itemsInCategory = this.shopItems.filter(item => item.category === category);
+                try {
+                    // Load shop items from API
+                    const response = await this.apiCall('/api/shop', 'GET');
+                    
+                    if (response && response.success) {
+                        this.shopItems = response.data; // Store all items
+                        console.log('Loaded shop items:', this.shopItems);
+                        container.innerHTML = ''; // Clear loading message                const itemsInCategory = this.shopItems.filter(item => item.category === category);
                 
                 if (itemsInCategory.length === 0) {
                     container.innerHTML = '<div class="no-items">No items available in this category</div>';
