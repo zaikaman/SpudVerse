@@ -226,8 +226,9 @@ class SpudVerse {
                 name: error.name
             });
             
-            // If it's a network error, might be new user
-            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+            // If it's a 404 or 401 error, might be new user
+            if (error.message.includes('404') || error.message.includes('401') || 
+                error.message.includes('Unauthorized') || error.message.includes('User not found')) {
                 console.log('🆕 New user detected (from error), showing welcome modal');
                 await this.showWelcomeModal();
                 return;
