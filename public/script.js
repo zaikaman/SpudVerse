@@ -227,7 +227,12 @@ class SpudVerse {
                 this.showDebugToast('⚠️ API not successful - checking if new user', 'warning');
                 
                 // Check if this is a new user (404 or specific error)
-                if (response && (response.error === 'User not found' || response.isNewUser)) {
+                if (response && (
+                    response.error === 'User not found' || 
+                    response.isNewUser ||
+                    (response.error && response.error.includes('404')) ||
+                    (response.error && response.error.includes('HTTP error! status: 404'))
+                )) {
                     console.log('🆕 New user detected from response, showing welcome modal');
                     this.showDebugToast('🆕 NEW USER DETECTED! Showing welcome modal', 'success');
                     await this.showWelcomeModal();
