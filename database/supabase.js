@@ -27,17 +27,25 @@ class SupabaseDatabase {
         if (!this.client) return null;
         
         try {
+            // First, sync balance to account for offline SPH earnings
+            const { error: syncError } = await this.client
+                .rpc('sync_balance_with_sph', { p_user_id: userId });
+
+            if (syncError) {
+                // Log the error but don't block user retrieval
+                console.error('Supabase syncBalance pre-fetch error:', syncError);
+            }
+
+            // Then, get all user data using the dedicated function
             const { data, error } = await this.client
-                .from('users')
-                .select('*')
-                .eq('user_id', userId)
-                .single();
+                .rpc('get_user_data', { p_user_id: userId });
                 
-            if (error && error.code !== 'PGRST116') {
-                console.error('Supabase getUser error:', error);
+            if (error) {
+                console.error('Supabase getUser (get_user_data) error:', error);
                 return null;
             }
             
+            // The RPC function returns a single JSON object, not an array
             return data;
         } catch (error) {
             console.error('getUser error:', error);
@@ -776,6 +784,74 @@ class SupabaseDatabase {
         } catch (err) {
             console.error(`Unexpected error in updateUserStreak for user ${userId}:`, err);
             return { success: false, error: 'An unexpected error occurred' };
+        }
+    }
+
+    async getShopItems() {
+        if (!this.client) {
+            // This could return mock data for local development without DB connection
+            return [];
+        }
+
+        try {
+            const { data, error } = await this.client
+                .from('shop_items')
+                .select('*')
+                .order('id');
+
+            if (error) {
+                console.error('Supabase getShopItems error:', error);
+                return [];
+            }
+
+            return data || [];
+        } catch (error) {
+            console.error('getShopItems error:', error);
+            return [];
+        }
+    }
+
+    async buyShopItem(userId, itemId) {
+        if (!this.client) {
+            return { success: false, error: 'No database connection' };
+        }
+
+        try {
+            const { data, error } = await this.client
+                .rpc('buy_shop_item', {
+                    p_user_id: userId,
+                    p_item_id: itemId
+                });
+
+            if (error) {
+                console.error('Supabase buyShopItem RPC error:', error);
+                return { success: false, error: error.message, details: error.details };
+            }
+
+            // The function returns a JSON object with success status and data
+            return data;
+        } catch (error) {
+            console.error('buyShopItem error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async syncBalance(userId) {
+        if (!this.client) {
+            return { success: false, error: 'No database connection' };
+        }
+        try {
+            const { data, error } = await this.client
+                .rpc('sync_balance_with_sph', { p_user_id: userId });
+
+            if (error) {
+                console.error('Supabase syncBalance error:', error);
+                return { success: false, error: error.message };
+            }
+            return data;
+        } catch (error) {
+            console.error('syncBalance error:', error);
+            return { success: false, error: error.message };
         }
     }
 

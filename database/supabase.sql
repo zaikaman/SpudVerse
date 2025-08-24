@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS users (
     streak INTEGER DEFAULT 0,
     best_streak INTEGER DEFAULT 0,
     last_played_at TIMESTAMP WITH TIME ZONE,
+    sph BIGINT DEFAULT 0,
+    last_sph_update TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -621,6 +623,223 @@ BEGIN
             'best_streak', user_record.best_streak
         );
     END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create shop_items table
+CREATE TABLE IF NOT EXISTS shop_items (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    cost BIGINT NOT NULL,
+    profit INTEGER NOT NULL,
+    scaling REAL NOT NULL,
+    icon TEXT,
+    category TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create user_items table
+CREATE TABLE IF NOT EXISTS user_items (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(user_id),
+    item_id INTEGER REFERENCES shop_items(id),
+    count INTEGER DEFAULT 0,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, item_id)
+);
+
+-- Insert all 40 shop items
+INSERT INTO shop_items (id, name, cost, profit, scaling, icon, category) VALUES
+(1, 'Wooden Shovel', 10, 1, 1.5, '🪣', 'potato-land'),
+(2, 'Rusty Hoe', 20, 3, 1.5, '🏡', 'potato-land'),
+(3, 'Small Basket', 50, 6, 1.5, '🛒', 'potato-land'),
+(4, 'Iron Spade', 100, 12, 1.5, '🥔', 'potato-land'),
+(5, 'Handcart', 250, 25, 1.5, '⚙️', 'potato-land'),
+(6, 'Watering Can', 500, 60, 1.5, '🚜', 'potato-land'),
+(7, 'Wooden Wheelbarrow', 1200, 120, 1.5, '🎉', 'potato-land'),
+(8, 'Basic Fertilizer', 2500, 300, 1.5, '🗿', 'potato-land'),
+(9, 'Iron Hoe', 5000, 600, 1.5, '🛍', 'potato-city'),
+(10, 'Strong Basket', 10000, 1200, 1.5, '🌭', 'potato-city'),
+(11, 'Iron Wheelbarrow', 25000, 2500, 1.5, '🍴', 'potato-city'),
+(12, 'Better Fertilizer', 50000, 6000, 1.5, '🚚', 'potato-city'),
+(13, 'Wooden Tractor', 120000, 12000, 1.5, '🏭', 'potato-city'),
+(14, 'Steel Shovel', 250000, 25000, 1.5, '🗼', 'potato-city'),
+(15, 'Motor Cart', 500000, 60000, 1.5, '🚇', 'potato-city'),
+(16, 'Steel Hoe', 1000000, 120000, 1.5, '🏢', 'potato-city'),
+(17, 'Sprinkler System', 2500000, 300000, 1.5, '🎓', 'potato-nation'),
+(18, 'Big Tractor', 5000000, 600000, 1.5, '🏦', 'potato-nation'),
+(19, 'Modern Fertilizer', 10000000, 1200000, 1.5, '🏛', 'potato-nation'),
+(20, 'Potato Harvester', 25000000, 2500000, 1.5, '📺', 'potato-nation'),
+(21, 'Industrial Spade', 50000000, 6000000, 1.5, '🚂', 'potato-nation'),
+(22, 'Advanced Cart', 100000000, 12000000, 1.5, '🪖', 'potato-nation'),
+(23, 'Automated Sprayer', 250000000, 25000000, 1.5, '✈️', 'potato-nation'),
+(24, 'Mega Tractor', 500000000, 60000000, 1.5, '☢️', 'potato-nation'),
+(25, 'Super Fertilizer', 1000000000, 120000000, 1.5, '💻', 'potato-world'),
+(26, 'Potato Factory', 2500000000, 300000000, 1.5, '🖥', 'potato-world'),
+(27, 'Titanium Hoe', 5000000000, 600000000, 1.5, '📈', 'potato-world'),
+(28, 'Drone Planter', 10000000000, 1200000000, 1.5, '🚀', 'potato-world'),
+(29, 'Nano Fertilizer', 25000000000, 2500000000, 1.5, '🤖', 'potato-world'),
+(30, 'Autonomous Tractor', 50000000000, 6000000000, 1.5, '⛏', 'potato-world'),
+(31, 'Smart Irrigation', 100000000000, 12000000000, 1.5, '🌐', 'potato-world'),
+(32, 'Space Greenhouse', 250000000000, 25000000000, 1.5, '⏳', 'potato-world'),
+(33, 'AI Farmer Bot', 500000000000, 60000000000, 1.5, '🌕', 'potato-galaxy'),
+(34, 'Quantum Hoe', 1000000000000, 120000000000, 1.5, '🪐', 'potato-galaxy'),
+(35, 'Terraform Machine', 2500000000000, 300000000000, 1.5, '🛰', 'potato-galaxy'),
+(36, 'Wormhole Seeder', 5000000000000, 600000000000, 1.5, '⚡', 'potato-galaxy'),
+(37, 'Nano Factory', 10000000000000, 1200000000000, 1.5, '🌀', 'potato-galaxy'),
+(38, 'Potato Multiverse', 25000000000000, 2500000000000, 1.5, '👑', 'potato-galaxy'),
+(39, 'Time Travel Tractor', 50000000000000, 6000000000000, 1.5, '☀️', 'potato-galaxy'),
+(40, 'Godly Potato Field', 100000000000000, 12000000000000, 1.5, '🌌', 'potato-galaxy')
+ON CONFLICT (id) DO NOTHING;
+
+-- Create indexes for shop
+CREATE INDEX IF NOT EXISTS idx_user_items_user_item ON user_items(user_id, item_id);
+
+-- Enable RLS for shop tables
+ALTER TABLE shop_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_items ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for shop tables
+CREATE POLICY "Allow read on shop_items" ON shop_items FOR SELECT USING (true);
+CREATE POLICY "Allow all operations on user_items" ON user_items FOR ALL USING (true);
+
+-- Function to buy a shop item
+CREATE OR REPLACE FUNCTION buy_shop_item(p_user_id BIGINT, p_item_id INTEGER)
+RETURNS JSON AS $$
+DECLARE
+    user_record RECORD;
+    item_record RECORD;
+    user_item_record RECORD;
+    current_count INTEGER;
+    cost BIGINT;
+BEGIN
+    -- Get records
+    SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
+    SELECT * INTO item_record FROM shop_items WHERE id = p_item_id;
+    SELECT * INTO user_item_record FROM user_items WHERE user_id = p_user_id AND item_id = p_item_id;
+
+    IF user_record IS NULL OR item_record IS NULL THEN
+        RETURN json_build_object('success', false, 'error', 'invalid_data');
+    END IF;
+
+    -- Determine current count and cost
+    current_count := COALESCE(user_item_record.count, 0);
+    cost := FLOOR(item_record.cost * POWER(item_record.scaling, current_count));
+
+    -- Check balance
+    IF user_record.balance < cost THEN
+        RETURN json_build_object('success', false, 'error', 'insufficient_balance', 'required', cost);
+    END IF;
+
+    -- Deduct cost, update SPH, and update user_items
+    UPDATE users 
+    SET 
+        balance = balance - cost,
+        sph = sph + item_record.profit
+    WHERE user_id = p_user_id;
+
+    IF user_item_record IS NULL THEN
+        INSERT INTO user_items (user_id, item_id, count)
+        VALUES (p_user_id, p_item_id, 1);
+    ELSE
+        UPDATE user_items SET count = count + 1, updated_at = NOW()
+        WHERE id = user_item_record.id;
+    END IF;
+
+    -- Return success with updated data
+    SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
+    SELECT * INTO user_item_record FROM user_items WHERE user_id = p_user_id AND item_id = p_item_id;
+
+    RETURN json_build_object(
+        'success', true,
+        'new_balance', user_record.balance,
+        'new_sph', user_record.sph,
+        'item_id', p_item_id,
+        'new_count', user_item_record.count
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get user data including items
+CREATE OR REPLACE FUNCTION get_user_data(p_user_id BIGINT)
+RETURNS JSON AS $$
+DECLARE
+    user_details RECORD;
+    user_items_json JSON;
+BEGIN
+    -- Get user details
+    SELECT * INTO user_details FROM users WHERE user_id = p_user_id;
+
+    IF user_details IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- Get user items
+    SELECT json_agg(json_build_object('id', ui.item_id, 'count', ui.count))
+    INTO user_items_json
+    FROM user_items ui
+    WHERE ui.user_id = p_user_id;
+
+    -- Combine into a single JSON object
+    RETURN json_build_object(
+        'user_id', user_details.user_id,
+        'username', user_details.username,
+        'first_name', user_details.first_name,
+        'last_name', user_details.last_name,
+        'balance', user_details.balance,
+        'total_farmed', user_details.total_farmed,
+        'level', user_details.level,
+        'per_tap', user_details.per_tap,
+        'energy', user_details.energy,
+        'max_energy', user_details.max_energy,
+        'energy_regen_rate', user_details.energy_regen_rate,
+        'streak', user_details.streak,
+        'best_streak', user_details.best_streak,
+        'sph', user_details.sph,
+        'items', COALESCE(user_items_json, '[]'::json)
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to sync balance with SPH earnings
+CREATE OR REPLACE FUNCTION sync_balance_with_sph(p_user_id BIGINT)
+RETURNS JSON AS $$
+DECLARE
+    user_record RECORD;
+    time_diff_seconds BIGINT;
+    sph_earnings BIGINT;
+    new_balance BIGINT;
+BEGIN
+    -- Get user record
+    SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
+
+    IF user_record IS NULL THEN
+        RETURN json_build_object('success', false, 'error', 'user_not_found');
+    END IF;
+
+    -- Calculate time difference in seconds
+    time_diff_seconds := EXTRACT(EPOCH FROM (NOW() - user_record.last_sph_update));
+
+    IF time_diff_seconds <= 0 THEN
+        RETURN json_build_object('success', true, 'balance', user_record.balance, 'earnings', 0);
+    END IF;
+
+    -- Calculate earnings
+    sph_earnings := FLOOR(user_record.sph * time_diff_seconds / 3600.0);
+
+    IF sph_earnings > 0 THEN
+        -- Update balance and last_sph_update
+        UPDATE users
+        SET 
+            balance = balance + sph_earnings,
+            last_sph_update = NOW()
+        WHERE user_id = p_user_id
+        RETURNING balance INTO new_balance;
+    ELSE
+        new_balance := user_record.balance;
+    END IF;
+
+    RETURN json_build_object('success', true, 'balance', new_balance, 'earnings', sph_earnings);
 END;
 $$ LANGUAGE plpgsql;
 

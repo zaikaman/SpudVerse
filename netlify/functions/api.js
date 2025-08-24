@@ -43,26 +43,40 @@ function getUserIdFromRequest(req) {
 }
 
 // API Routes
-app.get('/user', async (req, res) => {
+app.get('/api/user', async (req, res) => {
     try {
         const userId = getUserIdFromRequest(req);
         if (!userId) {
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
-        const user = await db.getUser(userId);
-        const referralCount = await db.getReferralCount(userId);
+        let userData = await db.getUser(userId);
         
+        if (!userData) {
+            // If user doesn't exist, let's try to create them.
+            const auth = req.headers.authorization;
+            if (auth && auth.startsWith('tma ')) {
+                const initData = auth.slice(4);
+                const params = new URLSearchParams(initData);
+                const userStr = params.get('user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    const newUser = await db.createUser(user.id, user.username, user.first_name, user.last_name);
+                    if (newUser) {
+                        // Fetch the newly created user data
+                        userData = await db.getUser(user.id);
+                    }
+                }
+            }
+        }
+
+        if (!userData) {
+            return res.status(404).json({ success: false, error: 'User not found and could not be created.' });
+        }
+
         res.json({
             success: true,
-            data: {
-                balance: user?.balance || 0,
-                level: user?.level || 1,
-                per_tap: user?.per_tap || 1,
-                max_energy: user?.max_energy || 100,
-                total_farmed: user?.total_farmed || 0,
-                referrals: referralCount
-            }
+            data: userData
         });
     } catch (error) {
         console.error('API Error:', error);
@@ -70,7 +84,7 @@ app.get('/user', async (req, res) => {
     }
 });
 
-app.post('/tap', async (req, res) => {
+app.post('/api/tap', async (req, res) => {
     try {
         const userId = getUserIdFromRequest(req);
         if (!userId) {
@@ -98,7 +112,7 @@ app.post('/tap', async (req, res) => {
     }
 });
 
-app.get('/missions', async (req, res) => {
+app.get('/api/missions', async (req, res) => {
     try {
         const userId = getUserIdFromRequest(req);
         if (!userId) {
@@ -137,7 +151,7 @@ app.get('/missions', async (req, res) => {
     }
 });
 
-app.post('/missions/claim', async (req, res) => {
+app.post('/api/missions/claim', async (req, res) => {
     try {
         const userId = getUserIdFromRequest(req);
         if (!userId) {
@@ -173,7 +187,7 @@ app.post('/missions/claim', async (req, res) => {
     }
 });
 
-app.post('/user/level-up', async (req, res) => {
+app.post('/api/user/level-up', async (req, res) => {
     try {
         const userId = getUserIdFromRequest(req);
         if (!userId) {
@@ -201,7 +215,7 @@ app.post('/user/level-up', async (req, res) => {
     }
 });
 
-app.get('/leaderboard', async (req, res) => {
+app.get('/api/leaderboard', async (req, res) => {
     try {
         const leaderboard = await db.getLeaderboard(10);
         const formattedLeaderboard = leaderboard.map((user, index) => ({
@@ -258,6 +272,57 @@ app.post('/api/upgrades/purchase', async (req, res) => {
         }
     } catch (error) {
         console.error('Purchase Upgrade API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+// Shop routes
+app.get('/api/shop', async (req, res) => {
+    try {
+        const items = await db.getShopItems();
+        res.json({ success: true, data: items });
+    } catch (error) {
+        console.error('Shop API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+app.post('/api/shop/buy', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const { itemId } = req.body;
+        if (!itemId) {
+            return res.status(400).json({ success: false, error: 'Item ID is required' });
+        }
+
+        const result = await db.buyShopItem(userId, itemId);
+        
+        if (result.success) {
+            res.json(result);
+        } else {
+            res.status(400).json(result);
+        }
+    } catch (error) {
+        console.error('Buy Shop Item API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
+app.get('/api/user/sync-balance', async (req, res) => {
+    try {
+        const userId = getUserIdFromRequest(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+
+        const result = await db.syncBalance(userId);
+        res.json(result);
+    } catch (error) {
+        console.error('Sync Balance API Error:', error);
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
