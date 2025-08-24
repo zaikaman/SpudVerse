@@ -148,20 +148,54 @@ app.get('/api/user', async (req, res) => {
             if (referrerId && referrerId !== userId) {
                 console.log('🎁 Processing referral bonus:', { referrerId, userId });
                 
-                await db.addReferral(referrerId, userId);
-                await db.updateUserBalance(referrerId, parseInt(process.env.REFERRAL_BONUS) || 100);
-                await db.updateUserBalance(userId, 50); // Bonus for invited user
-                
-                // Try to send notification to referrer (via bot if available)
                 try {
-                    if (bot.telegram) {
-                        await bot.telegram.sendMessage(referrerId, 
-                            `${EMOJIS.tada} You just earned ${process.env.REFERRAL_BONUS || 100} SPUD from inviting a friend! ${EMOJIS.money}`
-                        );
+                    // Step 1: Add referral record
+                    console.log('📝 Step 1: Adding referral record...');
+                    const referralResult = await db.addReferral(referrerId, userId);
+                    console.log('📝 Referral record result:', referralResult);
+                    
+                    // Step 2: Update referrer balance
+                    const referrerBonus = parseInt(process.env.REFERRAL_BONUS) || 100;
+                    console.log(`💰 Step 2: Updating referrer ${referrerId} balance by +${referrerBonus} SPUD`);
+                    const referrerUpdateResult = await db.updateUserBalance(referrerId, referrerBonus);
+                    console.log('💰 Referrer balance update result:', referrerUpdateResult);
+                    
+                    // Step 3: Update referred user balance
+                    const referredBonus = 50;
+                    console.log(`💰 Step 3: Updating referred user ${userId} balance by +${referredBonus} SPUD`);
+                    const referredUpdateResult = await db.updateUserBalance(userId, referredBonus);
+                    console.log('💰 Referred user balance update result:', referredUpdateResult);
+                    
+                    // Step 4: Verify balances were updated
+                    const referrerUser = await db.getUser(referrerId);
+                    const referredUser = await db.getUser(userId);
+                    console.log('🔍 Post-bonus verification:', {
+                        referrerBalance: referrerUser?.balance,
+                        referredBalance: referredUser?.balance
+                    });
+                    
+                    // Try to send notification to referrer (via bot if available)
+                    try {
+                        if (bot.telegram) {
+                            await bot.telegram.sendMessage(referrerId, 
+                                `${EMOJIS.tada} You just earned ${referrerBonus} SPUD from inviting a friend! ${EMOJIS.money}`
+                            );
+                            console.log('📱 Notification sent to referrer');
+                        }
+                    } catch (err) {
+                        console.log('📱 Cannot send referral notification:', err.message);
                     }
-                } catch (err) {
-                    console.log('Cannot send referral notification:', err.message);
+                    
+                } catch (referralError) {
+                    console.error('❌ Referral bonus processing failed:', referralError);
                 }
+            } else {
+                console.log('⏭️ Skipping referral bonus:', { 
+                    hasReferrerId: !!referrerId, 
+                    referrerId, 
+                    userId,
+                    isSameUser: referrerId === userId 
+                });
             }
             
             // Create welcome mission for new user
@@ -948,6 +982,144 @@ app.get('/api/debug/check-referrals', async (req, res) => {
         
     } catch (error) {
         console.error('Debug check referrals error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// DEBUG: Check specific user referrals
+app.get('/api/debug/user-referrals/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        console.log('🔍 DEBUG: Checking referrals for user:', userId);
+        
+        // Get user info
+        const user = await db.getUser(userId);
+        console.log('👤 User info:', user);
+        
+        // Get referral count
+        const referralCount = await db.getReferralCount(userId);
+        console.log('📊 Referral count:', referralCount);
+        
+        // Try to query referrals table directly if using Supabase
+        let directReferrals = null;
+        if (db.client) {
+            try {
+                const { data, error } = await db.client
+                    .from('referrals')
+                    .select('*')
+                    .eq('referrer_id', userId);
+                    
+                if (!error) {
+                    directReferrals = data;
+                    console.log('📋 Direct referrals query:', directReferrals);
+                }
+            } catch (err) {
+                console.log('⚠️ Could not query referrals directly:', err.message);
+            }
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                userId: userId,
+                user: user,
+                referralCount: referralCount,
+                directReferrals: directReferrals,
+                timestamp: new Date().toISOString()
+            }
+        });
+        
+    } catch (error) {
+        console.error('Debug user referrals error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// DEBUG: Test referral bonus manually
+app.post('/api/debug/test-referral-bonus', async (req, res) => {
+    try {
+        const { referrerId, referredId } = req.body;
+        
+        if (!referrerId || !referredId) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Missing referrerId or referredId' 
+            });
+        }
+        
+        console.log('🧪 DEBUG: Testing referral bonus manually:', { referrerId, referredId });
+        
+        // Get initial balances
+        const initialReferrer = await db.getUser(referrerId);
+        const initialReferred = await db.getUser(referredId);
+        
+        console.log('📊 Initial balances:', {
+            referrer: initialReferrer?.balance || 0,
+            referred: initialReferred?.balance || 0
+        });
+        
+        // Process referral bonus
+        try {
+            // Step 1: Add referral record
+            console.log('📝 Step 1: Adding referral record...');
+            const referralResult = await db.addReferral(referrerId, referredId);
+            console.log('📝 Referral record result:', referralResult);
+            
+            // Step 2: Update referrer balance
+            const referrerBonus = 100;
+            console.log(`💰 Step 2: Updating referrer ${referrerId} balance by +${referrerBonus} SPUD`);
+            const referrerUpdateResult = await db.updateUserBalance(referrerId, referrerBonus);
+            console.log('💰 Referrer balance update result:', referrerUpdateResult);
+            
+            // Step 3: Update referred user balance
+            const referredBonus = 50;
+            console.log(`💰 Step 3: Updating referred user ${referredId} balance by +${referredBonus} SPUD`);
+            const referredUpdateResult = await db.updateUserBalance(referredId, referredBonus);
+            console.log('💰 Referred user balance update result:', referredUpdateResult);
+            
+            // Step 4: Verify final balances
+            const finalReferrer = await db.getUser(referrerId);
+            const finalReferred = await db.getUser(referredId);
+            
+            console.log('🔍 Final balances:', {
+                referrer: finalReferrer?.balance || 0,
+                referred: finalReferred?.balance || 0
+            });
+            
+            // Step 5: Check referral count
+            const referralCount = await db.getReferralCount(referrerId);
+            console.log('📊 Final referral count:', referralCount);
+            
+            res.json({
+                success: true,
+                data: {
+                    referralRecord: referralResult,
+                    referrerUpdate: referrerUpdateResult,
+                    referredUpdate: referredUpdateResult,
+                    initialBalances: {
+                        referrer: initialReferrer?.balance || 0,
+                        referred: initialReferred?.balance || 0
+                    },
+                    finalBalances: {
+                        referrer: finalReferrer?.balance || 0,
+                        referred: finalReferred?.balance || 0
+                    },
+                    referralCount: referralCount,
+                    message: 'Manual referral bonus test completed'
+                }
+            });
+            
+        } catch (bonusError) {
+            console.error('❌ Manual referral bonus test failed:', bonusError);
+            res.status(500).json({
+                success: false,
+                error: bonusError.message,
+                stack: bonusError.stack
+            });
+        }
+        
+    } catch (error) {
+        console.error('Debug test referral bonus error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
