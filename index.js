@@ -1711,38 +1711,34 @@ app.post('/api/shop/buy', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Item ID is required' });
         }
 
-        // Get item details
-        const item = await db.getShopItem(itemId);
+        // Get all shop items to find the one we want
+        const shopItems = await db.getShopItems();
+        const item = shopItems.find(item => item.id === itemId);
         if (!item) {
             return res.status(404).json({ success: false, error: 'Item not found' });
         }
 
-        // Check if user already owns the item
-        const userOwnsItem = await db.checkUserOwnsItem(userId, itemId);
-        if (userOwnsItem) {
-            return res.status(400).json({ success: false, error: 'You already own this item' });
-        }
-
-        // Check user balance
-        const user = await db.getUser(userId);
-        if (user.balance < item.price) {
-            return res.status(400).json({ success: false, error: 'Insufficient balance' });
-        }
-
-        // Process purchase
-        const success = await db.purchaseItem(userId, itemId, item.price);
-        if (!success) {
-            return res.status(500).json({ success: false, error: 'Purchase failed' });
+        // Process purchase through RPC function
+        const result = await db.buyShopItem(userId, itemId);
+        if (!result.success) {
+            return res.status(400).json({ 
+                success: false, 
+                error: result.error || 'Purchase failed',
+                details: result.details
+            });
         }
 
         // Get updated user data
         const updatedUser = await db.getUser(userId);
+        const energyData = await db.getUserEnergy(userId);
 
         res.json({
             success: true,
             data: {
                 item: item,
                 newBalance: updatedUser.balance,
+                energy: energyData.current_energy,
+                maxEnergy: energyData.max_energy,
                 message: `Successfully purchased ${item.name}!`
             }
         });
