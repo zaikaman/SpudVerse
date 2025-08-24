@@ -13,6 +13,8 @@ class SpudVerse {
             perTap: 1,
             streak: 0,
             combo: 1,
+            level: 1,
+            totalFarmed: 0,
             referrals: 0,
             missions: [],
             achievements: []
@@ -33,8 +35,49 @@ class SpudVerse {
         // Local energy regeneration tracking
         this.lastEnergyUpdate = Date.now();
         this.localRegenTimer = null;
+
+        this.levels = [
+            { level: 1, requiredFarmed: 0, perTapBonus: 1, maxEnergyBonus: 100, title: 'Spud Starter 🌱' },
+            { level: 2, requiredFarmed: 1000, perTapBonus: 2, maxEnergyBonus: 150, title: 'Tater Tot 🥔' },
+            { level: 3, requiredFarmed: 5000, perTapBonus: 3, maxEnergyBonus: 200, title: 'Farm Hand 🧑‍🌾' },
+            { level: 4, requiredFarmed: 15000, perTapBonus: 5, maxEnergyBonus: 250, title: 'Crop Captain 🚀' },
+            { level: 5, requiredFarmed: 50000, perTapBonus: 8, maxEnergyBonus: 350, title: 'Potato Baron 👑' },
+            { level: 6, requiredFarmed: 150000, perTapBonus: 12, maxEnergyBonus: 500, title: 'Spud-nik Explorer 🧑‍🚀' },
+            { level: 7, requiredFarmed: 500000, perTapBonus: 20, maxEnergyBonus: 750, title: 'Legendary Spud Master 🌟' }
+        ];
         
         this.init();
+    }
+
+    getCurrentLevelInfo() {
+        return this.levels.find(l => l.level === this.gameData.level) || this.levels[0];
+    }
+
+    getNextLevelInfo() {
+        return this.levels.find(l => l.level === this.gameData.level + 1);
+    }
+
+    checkForLevelUp() {
+        const nextLevel = this.getNextLevelInfo();
+        if (!nextLevel || this.gameData.totalFarmed < nextLevel.requiredFarmed) {
+            return;
+        }
+
+        // Level up!
+        this.gameData.level++;
+        const newLevelInfo = this.getCurrentLevelInfo();
+
+        // Apply rewards
+        this.gameData.perTap = newLevelInfo.perTapBonus;
+        this.gameData.maxEnergy = newLevelInfo.maxEnergyBonus;
+        this.gameData.energy = this.gameData.maxEnergy; // Refill energy on level up
+
+        this.updateUI();
+        this.showToast(`🎉 Level Up! You are now Level ${newLevelInfo.level}: ${newLevelInfo.title}`, 'success');
+        this.confettiEffect();
+
+        // Check again in case of multiple level ups
+        this.checkForLevelUp();
     }
 
     async init() {
@@ -370,6 +413,7 @@ class SpudVerse {
         // Calculate earned SPUD
         const earnedSpud = Math.floor(this.gameData.perTap * this.gameData.combo);
         this.gameData.balance += earnedSpud;
+        this.gameData.totalFarmed += earnedSpud;
         
         // Reduce energy immediately for responsive UI
         this.gameData.energy = Math.max(0, this.gameData.energy - 1);
@@ -391,6 +435,9 @@ class SpudVerse {
 
         // Haptic feedback
         this.vibrate();
+
+        // Check for level up
+        this.checkForLevelUp();
 
         // Save progress
         this.saveProgress();
@@ -594,11 +641,14 @@ class SpudVerse {
     }
 
     updateUI() {
+        const levelInfo = this.getCurrentLevelInfo();
+
         // Update header
         if (this.user) {
             document.getElementById('username').textContent = 
                 this.user.first_name + (this.user.last_name ? ' ' + this.user.last_name : '');
         }
+        document.querySelector('.level').innerHTML = `Level ${levelInfo.level} ${levelInfo.title}`;
 
         // Update all stats
         this.updateBalance();
@@ -1101,9 +1151,14 @@ class SpudVerse {
             if (response && response.success) {
                 // Update balance from server response
                 const newBalance = response.data.balance;
+                const rewardAmount = newBalance - this.gameData.balance;
                 this.gameData.balance = newBalance;
+                if (rewardAmount > 0) {
+                    this.gameData.totalFarmed += rewardAmount;
+                }
                 this.updateBalance();
                 this.updateFarmStats();
+                this.checkForLevelUp(); // Check for level up after claiming mission
                 
                 // Reload missions from API to get updated status
                 console.log(`🔄 Reloading missions after claim for mission ${missionId}`);
@@ -1227,10 +1282,12 @@ class SpudVerse {
     }
 
     updateProfile() {
+        const levelInfo = this.getCurrentLevelInfo();
         if (this.user) {
             document.getElementById('profile-name').textContent = 
                 this.user.first_name + (this.user.last_name ? ' ' + this.user.last_name : '');
         }
+        document.querySelector('.profile-title').innerHTML = `${levelInfo.title}`;
         
         document.getElementById('profile-balance').textContent = this.formatNumber(this.gameData.balance);
         document.getElementById('profile-referrals').textContent = this.gameData.referrals;
