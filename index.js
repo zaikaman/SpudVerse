@@ -1218,12 +1218,16 @@ function getUserIdFromRequest(req) {
 function getUserInfoFromRequest(req) {
     const auth = req.headers.authorization;
     console.log('🔍 Auth header for user info:', auth ? 'Present' : 'Missing');
+    console.log('🔍 Full auth header:', auth);
+    
+    // Log all headers for debugging
+    console.log('🔍 All request headers:', JSON.stringify(req.headers, null, 2));
     
     if (auth && auth.startsWith('tma ')) {
         try {
             const initData = auth.slice(4);
             console.log('📊 Raw initData length:', initData.length);
-            console.log('📊 Raw initData (first 200 chars):', initData.substring(0, 200));
+            console.log('📊 Raw initData (full):', initData);
             
             const params = new URLSearchParams(initData);
             
@@ -1233,46 +1237,69 @@ function getUserInfoFromRequest(req) {
             
             console.log('📊 Telegram Mini App data:', {
                 userFound: !!userStr,
+                userStr: userStr,
                 startParam: startParam || 'None',
-                allParams: Array.from(params.keys())
+                allParams: Array.from(params.keys()),
+                allParamsWithValues: Object.fromEntries(params.entries())
             });
             
             // Log all parameters for debugging
             for (const [key, value] of params.entries()) {
-                console.log(`📊 Param ${key}:`, value.substring(0, 100));
+                console.log(`📊 Param ${key}:`, value);
             }
             
             if (userStr) {
-                const user = JSON.parse(userStr);
-                
-                // Parse referral ID from start_param
-                const referrerId = startParam ? parseReferralCode(startParam) : null;
-                
-                const userInfo = {
-                    userId: user.id,
-                    username: user.username || null,
-                    firstName: user.first_name || 'User',
-                    lastName: user.last_name || '',
-                    referrerId: referrerId
-                };
-                
-                console.log('✅ Parsed user info:', userInfo);
-                console.log('🔗 Referral parsing:', {
-                    startParam: startParam,
-                    parsedReferrerId: referrerId,
-                    parseFunction: 'parseReferralCode'
-                });
-                
-                return userInfo;
+                try {
+                    const user = JSON.parse(userStr);
+                    console.log('👤 Parsed user object:', user);
+                    
+                    // Parse referral ID from start_param
+                    const referrerId = startParam ? parseReferralCode(startParam) : null;
+                    
+                    const userInfo = {
+                        userId: user.id,
+                        username: user.username || null,
+                        firstName: user.first_name || 'User',
+                        lastName: user.last_name || '',
+                        referrerId: referrerId
+                    };
+                    
+                    console.log('✅ Parsed user info:', userInfo);
+                    console.log('🔗 Referral parsing:', {
+                        startParam: startParam,
+                        parsedReferrerId: referrerId,
+                        parseFunction: 'parseReferralCode'
+                    });
+                    
+                    return userInfo;
+                } catch (jsonError) {
+                    console.error('❌ Error parsing user JSON:', jsonError);
+                    console.error('❌ User string that failed:', userStr);
+                }
+            } else {
+                console.log('❌ No user string found in params');
             }
         } catch (error) {
             console.error('❌ Error parsing Telegram Mini App data:', error);
         }
+    } else {
+        console.log('❌ Auth header missing or invalid format');
+        console.log('❌ Expected format: "tma <initData>"');
+        console.log('❌ Actual format:', auth ? auth.substring(0, 50) + '...' : 'null');
     }
     
-    // Fallback for development
+    // Enhanced fallback for development
     const fallbackUserId = req.query.userId || req.body.userId;
     const fallbackReferrerId = req.query.referrerId || req.body.referrerId;
+    
+    console.log('🔄 Checking fallback options:', {
+        queryUserId: req.query.userId,
+        bodyUserId: req.body.userId,
+        queryReferrerId: req.query.referrerId,
+        bodyReferrerId: req.body.referrerId,
+        queryParams: req.query,
+        bodyParams: req.body
+    });
     
     if (fallbackUserId) {
         const userInfo = {
@@ -1287,7 +1314,7 @@ function getUserInfoFromRequest(req) {
         return userInfo;
     }
     
-    console.log('❌ No valid user info found');
+    console.log('❌ No valid user info found - all methods failed');
     return null;
 }
 
