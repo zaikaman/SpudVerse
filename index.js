@@ -1707,7 +1707,8 @@ app.get('/api/shop', async (req, res) => {
 
         console.log('✅ Sending response with items:', {
             totalItems: itemsWithStatus.length,
-            categories: [...new Set(itemsWithStatus.map(item => item.category))]
+            categories: [...new Set(itemsWithStatus.map(item => item.category))],
+            itemsPreview: itemsWithStatus.slice(0, 3) // Log first 3 items for preview
         });
 
         res.json({
