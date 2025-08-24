@@ -1349,7 +1349,22 @@ class SpudVerse {
             if (response && response.success) {
                 this.gameData.balance = response.data.balance;
                 this.gameData.sph = response.data.sph;
-                this.gameData.items = response.data.items;
+
+                // Safely update items state
+                if (Array.isArray(response.data.items)) {
+                    this.gameData.items = response.data.items;
+                } else {
+                    // Fallback if API doesn't return full items list
+                    console.warn("API did not return items list. Updating manually.");
+                    const userItems = Array.isArray(this.gameData.items) ? this.gameData.items : [];
+                    const ownedItem = userItems.find(i => i.id === itemId);
+                    if (ownedItem) {
+                        ownedItem.count++;
+                    } else {
+                        userItems.push({ id: itemId, count: 1 });
+                    }
+                    this.gameData.items = userItems;
+                }
 
                 this.updateUI();
                 this.loadShopItems();
