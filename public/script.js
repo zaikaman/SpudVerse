@@ -90,7 +90,7 @@ class SpudVerse {
             }
         } catch (error) {
             console.error('Error calling level-up API:', error);
-            this.showToast('Could not sync level up. Please try again.', 'error');
+            // this.showToast('Could not sync level up. Please try again.', 'error');
         }
     }
 
