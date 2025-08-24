@@ -648,48 +648,57 @@ CREATE TABLE IF NOT EXISTS user_items (
     UNIQUE(user_id, item_id)
 );
 
--- Insert all 40 shop items
-INSERT INTO shop_items (id, name, cost, profit, scaling, icon, category) VALUES
-(1, 'Wooden Shovel', 10, 1, 1.5, '🪣', 'potato-land'),
-(2, 'Rusty Hoe', 20, 3, 1.5, '🏡', 'potato-land'),
-(3, 'Small Basket', 50, 6, 1.5, '🛒', 'potato-land'),
-(4, 'Iron Spade', 100, 12, 1.5, '🥔', 'potato-land'),
-(5, 'Handcart', 250, 25, 1.5, '⚙️', 'potato-land'),
-(6, 'Watering Can', 500, 60, 1.5, '🚜', 'potato-land'),
-(7, 'Wooden Wheelbarrow', 1200, 120, 1.5, '🎉', 'potato-land'),
-(8, 'Basic Fertilizer', 2500, 300, 1.5, '🗿', 'potato-land'),
-(9, 'Iron Hoe', 5000, 600, 1.5, '🛍', 'potato-city'),
-(10, 'Strong Basket', 10000, 1200, 1.5, '🌭', 'potato-city'),
-(11, 'Iron Wheelbarrow', 25000, 2500, 1.5, '🍴', 'potato-city'),
-(12, 'Better Fertilizer', 50000, 6000, 1.5, '🚚', 'potato-city'),
-(13, 'Wooden Tractor', 120000, 12000, 1.5, '🏭', 'potato-city'),
-(14, 'Steel Shovel', 250000, 25000, 1.5, '🗼', 'potato-city'),
-(15, 'Motor Cart', 500000, 60000, 1.5, '🚇', 'potato-city'),
-(16, 'Steel Hoe', 1000000, 120000, 1.5, '🏢', 'potato-city'),
-(17, 'Sprinkler System', 2500000, 300000, 1.5, '🎓', 'potato-nation'),
-(18, 'Big Tractor', 5000000, 600000, 1.5, '🏦', 'potato-nation'),
-(19, 'Modern Fertilizer', 10000000, 1200000, 1.5, '🏛', 'potato-nation'),
-(20, 'Potato Harvester', 25000000, 2500000, 1.5, '📺', 'potato-nation'),
-(21, 'Industrial Spade', 50000000, 6000000, 1.5, '🚂', 'potato-nation'),
-(22, 'Advanced Cart', 100000000, 12000000, 1.5, '🪖', 'potato-nation'),
-(23, 'Automated Sprayer', 250000000, 25000000, 1.5, '✈️', 'potato-nation'),
-(24, 'Mega Tractor', 500000000, 60000000, 1.5, '☢️', 'potato-nation'),
-(25, 'Super Fertilizer', 1000000000, 120000000, 1.5, '💻', 'potato-world'),
-(26, 'Potato Factory', 2500000000, 300000000, 1.5, '🖥', 'potato-world'),
-(27, 'Titanium Hoe', 5000000000, 600000000, 1.5, '📈', 'potato-world'),
-(28, 'Drone Planter', 10000000000, 1200000000, 1.5, '🚀', 'potato-world'),
-(29, 'Nano Fertilizer', 25000000000, 2500000000, 1.5, '🤖', 'potato-world'),
-(30, 'Autonomous Tractor', 50000000000, 6000000000, 1.5, '⛏', 'potato-world'),
-(31, 'Smart Irrigation', 100000000000, 12000000000, 1.5, '🌐', 'potato-world'),
-(32, 'Space Greenhouse', 250000000000, 25000000000, 1.5, '⏳', 'potato-world'),
-(33, 'AI Farmer Bot', 500000000000, 60000000000, 1.5, '🌕', 'potato-galaxy'),
-(34, 'Quantum Hoe', 1000000000000, 120000000000, 1.5, '🪐', 'potato-galaxy'),
-(35, 'Terraform Machine', 2500000000000, 300000000000, 1.5, '🛰', 'potato-galaxy'),
-(36, 'Wormhole Seeder', 5000000000000, 600000000000, 1.5, '⚡', 'potato-galaxy'),
-(37, 'Nano Factory', 10000000000000, 1200000000000, 1.5, '🌀', 'potato-galaxy'),
-(38, 'Potato Multiverse', 25000000000000, 2500000000000, 1.5, '👑', 'potato-galaxy'),
-(39, 'Time Travel Tractor', 50000000000000, 6000000000000, 1.5, '☀️', 'potato-galaxy'),
-(40, 'Godly Potato Field', 100000000000000, 12000000000000, 1.5, '🌌', 'potato-galaxy')
+-- Thêm 40 vật phẩm mới với cấu trúc cột chính xác
+INSERT INTO shop_items (name, cost, profit, scaling, icon, category) VALUES
+-- Tab 1: Potato Land (Farm Life)
+('Old Shovel', 10, 5, 1.5, '🪣', 'Potato Land'),
+('Farmer''s Hut', 20, 15, 1.5, '🏡', 'Potato Land'),
+('Potato Cart', 50, 40, 1.5, '🛒', 'Potato Land'),
+('Village Market', 100, 100, 1.5, '🥔', 'Potato Land'),
+('Potato Mill', 250, 250, 1.5, '⚙️', 'Potato Land'),
+('Tractor Ride', 500, 800, 1.5, '🚜', 'Potato Land'),
+('Potato Festival', 1200, 2500, 1.5, '🎉', 'Potato Land'),
+('Potato Statue', 2500, 10000, 1.5, '🗿', 'Potato Land'),
+
+-- Tab 2: Potato City (Urban Growth)
+('Potato Shop', 5000, 20, 1.5, '🛍', 'Potato City'),
+('Street Food Corner', 10000, 60, 1.5, '🌭', 'Potato City'),
+('Potato Restaurant', 25000, 200, 1.5, '🍴', 'Potato City'),
+('Delivery Service', 50000, 700, 1.5, '🚚', 'Potato City'),
+('Potato Factory', 120000, 3000, 1.5, '🏭', 'Potato City'),
+('Potato Tower', 250000, 12000, 1.5, '🗼', 'Potato City'),
+('Potato Subway', 500000, 40000, 1.5, '🚇', 'Potato City'),
+('Potato Skyscraper', 1000000, 150000, 1.5, '🏢', 'Potato City'),
+
+-- Tab 3: Potato Nation (Industrial & National Power)
+('Potato University', 2500000, 500, 1.5, '🎓', 'Potato Nation'),
+('Potato Bank', 5000000, 2000, 1.5, '🏦', 'Potato Nation'),
+('Potato Parliament', 10000000, 8000, 1.5, '🏛', 'Potato Nation'),
+('Potato TV Station', 25000000, 30000, 1.5, '📺', 'Potato Nation'),
+('National Railway', 50000000, 120000, 1.5, '🚂', 'Potato Nation'),
+('Potato Military Base', 100000000, 500000, 1.5, '🪖', 'Potato Nation'),
+('Potato Airport', 250000000, 2000000, 1.5, '✈️', 'Potato Nation'),
+('Potato Nuclear Plant', 500000000, 10000000, 1.5, '☢️', 'Potato Nation'),
+
+-- Tab 4: Potato World (Global Expansion & Futuristic Tech)
+('Potato Internet Café', 1000000000, 50000, 1.5, '💻', 'Potato World'),
+('Potato Silicon Valley', 2500000000, 200000, 1.5, '🖥', 'Potato World'),
+('Potato Stock Exchange', 5000000000, 1000000, 1.5, '📈', 'Potato World'),
+('Potato Space Program', 10000000000, 5000000, 1.5, '🚀', 'Potato World'),
+('Potato AI Lab', 25000000000, 25000000, 1.5, '🤖', 'Potato World'),
+('Potato Crypto Farm', 50000000000, 100000000, 1.5, '⛏', 'Potato World'),
+('Potato World Expo', 100000000000, 500000000, 1.5, '🌐', 'Potato World'),
+('Potato Time Machine', 250000000000, 2500000000, 1.5, '⏳', 'Potato World'),
+
+-- Tab 5: Potato Galaxy (Cosmic Empire)
+('Potato Moonbase', 500000000000, 10000000, 1.5, '🌕', 'Potato Galaxy'),
+('Potato Mars Colony', 1000000000000, 50000000, 1.5, '🪐', 'Potato Galaxy'),
+('Potato Space Station', 2500000000000, 250000000, 1.5, '🛰', 'Potato Galaxy'),
+('Potato Warp Drive', 5000000000000, 1200000000, 1.5, '⚡', 'Potato Galaxy'),
+('Potato Black Hole Lab', 10000000000000, 6000000000, 1.5, '🌀', 'Potato Galaxy'),
+('Potato Galactic Senate', 25000000000000, 30000000000, 1.5, '👑', 'Potato Galaxy'),
+('Potato Dyson Sphere', 50000000000000, 150000000000, 1.5, '☀️', 'Potato Galaxy'),
+('Potato Multiverse Portal', 100000000000000, 999999999999, 1.5, '🌌')
 ON CONFLICT (id) DO NOTHING;
 
 -- Create indexes for shop

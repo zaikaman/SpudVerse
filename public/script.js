@@ -48,53 +48,7 @@ class SpudVerse {
             { level: 7, requiredFarmed: 500000, perTapBonus: 20, maxEnergyBonus: 750, title: 'Legendary Spud Master 🌟' }
         ];
 
-        this.shopItems = [
-            // Potato Land
-            { id: 1, name: 'Wooden Shovel', cost: 10, profit: 1, scaling: 1.5, icon: '🪣', category: 'potato-land' },
-            { id: 2, name: 'Rusty Hoe', cost: 20, profit: 3, scaling: 1.5, icon: '🏡', category: 'potato-land' },
-            { id: 3, name: 'Small Basket', cost: 50, profit: 6, scaling: 1.5, icon: '🛒', category: 'potato-land' },
-            { id: 4, name: 'Iron Spade', cost: 100, profit: 12, scaling: 1.5, icon: '🥔', category: 'potato-land' },
-            { id: 5, name: 'Handcart', cost: 250, profit: 25, scaling: 1.5, icon: '⚙️', category: 'potato-land' },
-            { id: 6, name: 'Watering Can', cost: 500, profit: 60, scaling: 1.5, icon: '🚜', category: 'potato-land' },
-            { id: 7, name: 'Wooden Wheelbarrow', cost: 1200, profit: 120, scaling: 1.5, icon: '🎉', category: 'potato-land' },
-            { id: 8, name: 'Basic Fertilizer', cost: 2500, profit: 300, scaling: 1.5, icon: '🗿', category: 'potato-land' },
-            // Potato City
-            { id: 9, name: 'Iron Hoe', cost: 5000, profit: 600, scaling: 1.5, icon: '🛍', category: 'potato-city' },
-            { id: 10, name: 'Strong Basket', cost: 10000, profit: 1200, scaling: 1.5, icon: '🌭', category: 'potato-city' },
-            { id: 11, name: 'Iron Wheelbarrow', cost: 25000, profit: 2500, scaling: 1.5, icon: '🍴', category: 'potato-city' },
-            { id: 12, name: 'Better Fertilizer', cost: 50000, profit: 6000, scaling: 1.5, icon: '🚚', category: 'potato-city' },
-            { id: 13, name: 'Wooden Tractor', cost: 120000, profit: 12000, scaling: 1.5, icon: '🏭', category: 'potato-city' },
-            { id: 14, name: 'Steel Shovel', cost: 250000, profit: 25000, scaling: 1.5, icon: '🗼', category: 'potato-city' },
-            { id: 15, name: 'Motor Cart', cost: 500000, profit: 60000, scaling: 1.5, icon: '🚇', category: 'potato-city' },
-            { id: 16, name: 'Steel Hoe', cost: 1000000, profit: 120000, scaling: 1.5, icon: '🏢', category: 'potato-city' },
-            // Potato Nation
-            { id: 17, name: 'Sprinkler System', cost: 2500000, profit: 300000, scaling: 1.5, icon: '🎓', category: 'potato-nation' },
-            { id: 18, name: 'Big Tractor', cost: 5000000, profit: 600000, scaling: 1.5, icon: '🏦', category: 'potato-nation' },
-            { id: 19, name: 'Modern Fertilizer', cost: 10000000, profit: 1200000, scaling: 1.5, icon: '🏛', category: 'potato-nation' },
-            { id: 20, name: 'Potato Harvester', cost: 25000000, profit: 2500000, scaling: 1.5, icon: '📺', category: 'potato-nation' },
-            { id: 21, name: 'Industrial Spade', cost: 50000000, profit: 6000000, scaling: 1.5, icon: '🚂', category: 'potato-nation' },
-            { id: 22, name: 'Advanced Cart', cost: 100000000, profit: 12000000, scaling: 1.5, icon: '🪖', category: 'potato-nation' },
-            { id: 23, name: 'Automated Sprayer', cost: 250000000, profit: 25000000, scaling: 1.5, icon: '✈️', category: 'potato-nation' },
-            { id: 24, name: 'Mega Tractor', cost: 500000000, profit: 60000000, scaling: 1.5, icon: '☢️', category: 'potato-nation' },
-            // Potato World
-            { id: 25, name: 'Super Fertilizer', cost: 1000000000, profit: 120000000, scaling: 1.5, icon: '💻', category: 'potato-world' },
-            { id: 26, name: 'Potato Factory', cost: 2500000000, profit: 300000000, scaling: 1.5, icon: '🖥', category: 'potato-world' },
-            { id: 27, name: 'Titanium Hoe', cost: 5000000000, profit: 600000000, scaling: 1.5, icon: '📈', category: 'potato-world' },
-            { id: 28, name: 'Drone Planter', cost: 10000000000, profit: 1200000000, scaling: 1.5, icon: '🚀', category: 'potato-world' },
-            { id: 29, name: 'Nano Fertilizer', cost: 25000000000, profit: 2500000000, scaling: 1.5, icon: '🤖', category: 'potato-world' },
-            { id: 30, name: 'Autonomous Tractor', cost: 50000000000, profit: 6000000000, scaling: 1.5, icon: '⛏', category: 'potato-world' },
-            { id: 31, name: 'Smart Irrigation', cost: 100000000000, profit: 12000000000, scaling: 1.5, icon: '🌐', category: 'potato-world' },
-            { id: 32, name: 'Space Greenhouse', cost: 250000000000, profit: 25000000000, scaling: 1.5, icon: '⏳', category: 'potato-world' },
-            // Potato Galaxy
-            { id: 33, name: 'AI Farmer Bot', cost: 500000000000, profit: 60000000000, scaling: 1.5, icon: '🌕', category: 'potato-galaxy' },
-            { id: 34, name: 'Quantum Hoe', cost: 1000000000000, profit: 120000000000, scaling: 1.5, icon: '🪐', category: 'potato-galaxy' },
-            { id: 35, name: 'Terraform Machine', cost: 2500000000000, profit: 300000000000, scaling: 1.5, icon: '🛰', category: 'potato-galaxy' },
-            { id: 36, name: 'Wormhole Seeder', cost: 5000000000000, profit: 600000000000, scaling: 1.5, icon: '⚡', category: 'potato-galaxy' },
-            { id: 37, name: 'Nano Factory', cost: 10000000000000, profit: 1200000000000, scaling: 1.5, icon: '🌀', category: 'potato-galaxy' },
-            { id: 38, name: 'Potato Multiverse', cost: 25000000000000, profit: 2500000000000, scaling: 1.5, icon: '👑', category: 'potato-galaxy' },
-            { id: 39, name: 'Time Travel Tractor', cost: 50000000000000, profit: 6000000000000, scaling: 1.5, icon: '☀️', category: 'potato-galaxy' },
-            { id: 40, name: 'Godly Potato Field', cost: 100000000000000, profit: 12000000000000, scaling: 1.5, icon: '🌌', category: 'potato-galaxy' },
-        ];
+        this.shopItems = []; // Will be loaded from API when Shop tab is opened
         
         this.init();
     }
@@ -1289,41 +1243,62 @@ class SpudVerse {
         }
     }
 
-    loadShopItems() {
+    async loadShopItems() {
         const activeCategoryBtn = document.querySelector('.item-shop-nav-btn.active');
         if (!activeCategoryBtn) return;
 
         const category = activeCategoryBtn.dataset.itemCategory;
         const container = document.getElementById('item-category-' + category);
-        container.innerHTML = '';
+        container.innerHTML = '<div class="loading-items">🔄 Loading items...</div>';
 
-        const itemsInCategory = this.shopItems.filter(item => item.category === category);
+        try {
+            // Load shop items from API
+            const response = await this.apiCall('/api/shop', 'GET');
+            
+            if (response && response.success) {
+                this.shopItems = response.data; // Store all items
+                container.innerHTML = ''; // Clear loading message
 
-        itemsInCategory.forEach(item => {
-            const ownedItem = this.gameData.items.find(i => i.id === item.id);
-            const count = ownedItem ? ownedItem.count : 0;
-            const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
-            const canAfford = this.gameData.balance >= currentCost;
+                const itemsInCategory = this.shopItems.filter(item => item.category === category);
+                
+                if (itemsInCategory.length === 0) {
+                    container.innerHTML = '<div class="no-items">No items available in this category</div>';
+                    return;
+                }
 
-            const itemCard = document.createElement('div');
-            itemCard.className = 'item-card';
-            itemCard.innerHTML = `
-                <div class="item-icon">${item.icon}</div>
-                <div class="item-info">
-                    <div class="item-name">${item.name}</div>
-                    <div class="item-profit">+${this.formatNumber(item.profit)} SPH</div>
-                </div>
-                <div class="item-action">
-                    <div class="item-count">Owned: ${count}</div>
-                    <button class="buy-item-btn" 
-                            onclick="spudverse.buyShopItem(${item.id})"
-                            ${!canAfford ? 'disabled' : ''}>
-                        Buy for ${this.formatNumber(currentCost)}
-                    </button>
-                </div>
-            `;
-            container.appendChild(itemCard);
-        });
+                itemsInCategory.forEach(item => {
+                    const ownedItem = this.gameData.items.find(i => i.id === item.id);
+                    const count = ownedItem ? ownedItem.count : 0;
+                    const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
+                    const canAfford = this.gameData.balance >= currentCost;
+
+                    const itemCard = document.createElement('div');
+                    itemCard.className = 'item-card';
+                    itemCard.innerHTML = `
+                        <div class="item-icon">${item.icon}</div>
+                        <div class="item-info">
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-profit">+${this.formatNumber(item.profit)} SPH</div>
+                        </div>
+                        <div class="item-action">
+                            <div class="item-count">Owned: ${count}</div>
+                            <button class="buy-item-btn" 
+                                    onclick="spudverse.buyShopItem(${item.id})"
+                                    ${!canAfford ? 'disabled' : ''}>
+                                Buy for ${this.formatNumber(currentCost)}
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(itemCard);
+                });
+            } else {
+                container.innerHTML = '<div class="error-message">⚠️ Failed to load shop items</div>';
+                console.error('Failed to load shop items:', response?.error);
+            }
+        } catch (error) {
+            container.innerHTML = '<div class="error-message">❌ Error loading shop items</div>';
+            console.error('Error loading shop items:', error);
+        }
     }
 
     async buyShopItem(itemId) {
