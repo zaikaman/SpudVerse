@@ -688,13 +688,16 @@ class SupabaseDatabase {
             } else {
                 // This is expected if the user doesn't meet the requirements for the next level yet.
                 // The previous implementation logged a warning, but it's not really a warning condition.
-                if (data.error === 'Level up requirements not met') {
+                const responseError = data?.error || 'Level up requirements not met';
+                const responseDetails = data?.details;
+
+                if (responseError === 'Level up requirements not met') {
                     // This can be uncommented for debugging to see why a user isn't leveling up.
-                    // console.info(`User ${userId} not ready for level ${newLevel}. Details:`, data.details);
+                    // console.info(`User ${userId} not ready for level ${newLevel}. Details:`, responseDetails);
                 } else {
-                    console.warn(`level_up_user check failed for user ${userId}:`, data.error, data.details);
+                    console.warn(`level_up_user check failed for user ${userId}:`, responseError, responseDetails);
                 }
-                return { success: false, error: data.error, details: data.details };
+                return { success: false, error: responseError, details: responseDetails };
             }
         } catch (err) {
             console.error(`Unexpected error in levelUpUser for user ${userId}:`, err);
