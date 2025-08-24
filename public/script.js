@@ -1256,7 +1256,13 @@ class SpudVerse {
             console.log('Looking for ID:', categoryId);
             return;
         }
-        container.innerHTML = '<div class="loading-items">🔄 Loading items...</div>';
+        container.innerHTML = `
+            <div class="potato-loading">
+                <div class="potato-spinner"></div>
+                <div class="loading-text">Loading Shop Items</div>
+                <div class="loading-subtext">Preparing your potato treasures... 🌟</div>
+            </div>
+        `;
 
                 try {
                     // Load shop items from API
