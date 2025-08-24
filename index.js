@@ -1672,22 +1672,43 @@ bot.on('callback_query', async (ctx) => {
 // Shop routes
 app.get('/api/shop', async (req, res) => {
     try {
+        console.log('🏪 Shop API request received');
+        
         const userId = getUserIdFromRequest(req);
+        console.log('👤 Shop - User ID:', userId);
+        
         if (!userId) {
+            console.log('❌ Shop request rejected - No user ID');
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
         // Get available shop items from database
+        console.log('🔍 Fetching shop items...');
         const shopItems = await db.getShopItems();
+        console.log('📦 Shop items found:', shopItems?.length || 0);
+        console.log('📦 Shop items details:', shopItems);
         
         // Get user's owned items
+        console.log('🔍 Fetching user items...');
         const userItems = await db.getUserItems(userId);
+        console.log('🛍️ User owned items:', userItems?.length || 0);
+        console.log('🛍️ User items details:', userItems);
         
         // Combine shop items with user ownership status
-        const itemsWithStatus = shopItems.map(item => ({
-            ...item,
-            owned: userItems.some(userItem => userItem.item_id === item.id)
-        }));
+        console.log('🔄 Combining shop and user items...');
+        const itemsWithStatus = shopItems.map(item => {
+            const isOwned = userItems.some(userItem => userItem.item_id === item.id);
+            console.log(`📝 Item ${item.name} (${item.id}) - Owned: ${isOwned}`);
+            return {
+                ...item,
+                owned: isOwned
+            };
+        });
+
+        console.log('✅ Sending response with items:', {
+            totalItems: itemsWithStatus.length,
+            categories: [...new Set(itemsWithStatus.map(item => item.category))]
+        });
 
         res.json({
             success: true,
@@ -1695,6 +1716,10 @@ app.get('/api/shop', async (req, res) => {
         });
     } catch (error) {
         console.error('Shop API Error:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack
+        });
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
