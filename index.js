@@ -942,58 +942,15 @@ app.get('/api/energy', async (req, res) => {
         const { userId, username, firstName, lastName, referrerId } = userInfo;
         console.log('⚡ Energy API request:', { userId, username, firstName, lastName, referrerId });
 
-        // Auto-create user if doesn't exist (fallback for missed /api/user calls)
+        // NEW APPROACH: Don't auto-create user, return 404 for new users
         let user = await db.getUser(userId);
         if (!user) {
-            console.log('🆕 Auto-creating user in Energy API:', userId);
-            
-            await db.createUser(
-                userId,
-                username || `user${userId}`,
-                firstName || 'User',
-                lastName || '',
-                referrerId
-            );
-            
-            // Process referral bonus if there's a referrer (same logic as /api/user)
-            if (referrerId && referrerId !== userId) {
-                console.log('🎁 Processing referral bonus in Energy API:', { referrerId, userId });
-                
-                try {
-                    // Check for existing referral to prevent duplicates
-                    let existingReferral = null;
-                    if (db.client) {
-                        const { data, error } = await db.client
-                            .from('referrals')
-                            .select('*')
-                            .eq('referrer_id', referrerId)
-                            .eq('referred_id', userId)
-                            .single();
-                            
-                        if (!error) {
-                            existingReferral = data;
-                        }
-                    }
-                    
-                    if (!existingReferral) {
-                        const referralResult = await db.addReferral(referrerId, userId);
-                        if (referralResult) {
-                            const referrerBonus = parseInt(process.env.REFERRAL_BONUS) || 100;
-                            const referredBonus = 50;
-                            
-                            await db.updateUserBalance(referrerId, referrerBonus);
-                            await db.updateUserBalance(userId, referredBonus);
-                            
-                            console.log('✅ Referral bonus processed in Energy API');
-                        }
-                    }
-                } catch (referralError) {
-                    console.error('❌ Referral bonus failed in Energy API:', referralError);
-                }
-            }
-            
-            // Create welcome mission
-            await db.updateUserMission(userId, 1, true, false);
+            console.log('🆕 New user detected in Energy API, returning 404:', userId);
+            return res.status(404).json({ 
+                success: false, 
+                error: 'User not found',
+                isNewUser: true 
+            });
         }
 
         const energyData = await db.getUserEnergy(userId);

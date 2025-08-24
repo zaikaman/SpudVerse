@@ -198,6 +198,9 @@ class SpudVerse {
             // Try to fetch from backend API
             const response = await this.apiCall('/api/user', 'GET');
             console.log('📥 /api/user response:', response);
+            console.log('📥 /api/user response type:', typeof response);
+            console.log('📥 /api/user response success:', response?.success);
+            console.log('📥 /api/user response error:', response?.error);
             
             if (response && response.success) {
                 console.log('✅ API data loaded successfully:', response.data);
@@ -208,10 +211,16 @@ class SpudVerse {
                 console.log('✅ User data loaded from API');
             } else {
                 console.log('⚠️ API response not successful - might be new user');
+                console.log('🔍 Checking response details:', {
+                    hasResponse: !!response,
+                    success: response?.success,
+                    error: response?.error,
+                    isNewUser: response?.isNewUser
+                });
                 
-                // Check if this is a new user (401 Unauthorized)
-                if (response && response.error === 'Unauthorized') {
-                    console.log('🆕 New user detected, showing welcome modal');
+                // Check if this is a new user (404 or specific error)
+                if (response && (response.error === 'User not found' || response.isNewUser)) {
+                    console.log('🆕 New user detected from response, showing welcome modal');
                     await this.showWelcomeModal();
                     return; // Don't continue until user completes welcome
                 }
@@ -223,12 +232,24 @@ class SpudVerse {
             console.error('❌ API call failed with error:', {
                 message: error.message,
                 stack: error.stack,
-                name: error.name
+                name: error.name,
+                response: error.response
             });
             
-            // If it's a 404 or 401 error, might be new user
-            if (error.message.includes('404') || error.message.includes('401') || 
-                error.message.includes('Unauthorized') || error.message.includes('User not found')) {
+            // Enhanced error checking
+            const errorMessage = error.message.toLowerCase();
+            const isNewUserError = errorMessage.includes('404') || 
+                                 errorMessage.includes('401') || 
+                                 errorMessage.includes('unauthorized') || 
+                                 errorMessage.includes('user not found');
+            
+            console.log('🔍 Error analysis:', {
+                errorMessage: error.message,
+                isNewUserError: isNewUserError,
+                shouldShowWelcome: isNewUserError
+            });
+            
+            if (isNewUserError) {
                 console.log('🆕 New user detected (from error), showing welcome modal');
                 await this.showWelcomeModal();
                 return;
@@ -563,40 +584,31 @@ class SpudVerse {
     }
 
     startBackendEnergySync() {
-        // Sync with backend every 10 seconds for accuracy
-        this.energyRegenInterval = setInterval(async () => {
-            try {
-                const response = await this.apiCall('/api/energy', 'GET');
-                if (response && response.success) {
-                    // Update game data with server values
-                    this.gameData.energy = response.data.current_energy;
-                    this.gameData.maxEnergy = response.data.max_energy;
-                    this.gameData.energyRegenRate = response.data.energy_regen_rate;
-                    this.lastEnergyUpdate = Date.now(); // Reset local timer
-                    
-                    console.log('🔄 Energy synced with backend:', this.gameData.energy);
+        // Only start energy sync if user data was successfully loaded
+        // This prevents /api/energy from creating users before welcome modal
+        if (this.gameData.balance !== undefined && this.gameData.balance >= 0) {
+            console.log('🔄 Starting backend energy sync for existing user');
+            
+            // Sync with backend every 10 seconds for accuracy
+            this.energyRegenInterval = setInterval(async () => {
+                try {
+                    const response = await this.apiCall('/api/energy', 'GET');
+                    if (response && response.success) {
+                        // Update game data with server values
+                        this.gameData.energy = response.data.current_energy;
+                        this.gameData.maxEnergy = response.data.max_energy;
+                        this.gameData.energyRegenRate = response.data.energy_regen_rate;
+                        this.lastEnergyUpdate = Date.now(); // Reset local timer
+                        
+                        console.log('🔄 Energy synced with backend:', this.gameData.energy);
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Backend energy sync failed, using local calculation');
                 }
-            } catch (error) {
-                console.warn('⚠️ Backend energy sync failed, using local calculation');
-            }
-        }, 10000); // 10 seconds
-        
-        // FALLBACK: Try to call /api/user once after 5 seconds if it wasn't called during loadUserData
-        setTimeout(async () => {
-            console.log('🔄 FALLBACK: Attempting delayed /api/user call...');
-            try {
-                const response = await this.apiCall('/api/user', 'GET');
-                if (response && response.success) {
-                    console.log('✅ FALLBACK: /api/user successful:', response.data);
-                    this.gameData = { ...this.gameData, ...response.data };
-                    this.updateUI();
-                } else {
-                    console.log('⚠️ FALLBACK: /api/user failed:', response);
-                }
-            } catch (error) {
-                console.error('❌ FALLBACK: /api/user error:', error);
-            }
-        }, 5000);
+            }, 10000); // 10 seconds
+        } else {
+            console.log('⏸️ Skipping backend energy sync - user not loaded yet');
+        }
     }
 
     stopEnergyRegen() {
@@ -1446,6 +1458,10 @@ class SpudVerse {
                 // Initialize local energy tracking
                 this.lastEnergyUpdate = Date.now();
                 this.updateUI();
+                
+                // Now that user is created, start backend energy sync
+                console.log('🔄 Starting backend energy sync for new user');
+                this.startBackendEnergySync();
                 
             } else {
                 console.error('❌ Failed to create user account:', response);
