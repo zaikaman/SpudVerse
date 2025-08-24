@@ -119,6 +119,156 @@ bot.use(async (ctx, next) => {
 });
 
 // API Routes for Mini App
+
+// User creation endpoint with referral code
+app.post('/api/user/create', async (req, res) => {
+    try {
+        console.log('🆕 User creation request received');
+        
+        // Get user info from Telegram auth
+        const userInfo = getUserInfoFromRequest(req);
+        if (!userInfo || !userInfo.userId) {
+            console.log('❌ User creation failed - no auth:', userInfo?.error || 'No user info');
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+        
+        const { userId, firstName, lastName, username } = userInfo;
+        const { referralCode } = req.body;
+        
+        console.log('🆕 Creating user:', {
+            userId,
+            firstName,
+            referralCode: referralCode || 'none'
+        });
+        
+        // Check if user already exists
+        const existingUser = await db.getUser(userId);
+        if (existingUser) {
+            console.log('✅ User already exists, returning existing data');
+            const referralCount = await db.getReferralCount(userId);
+            const energyData = await db.getUserEnergy(userId);
+            
+            return res.json({
+                success: true,
+                data: {
+                    balance: existingUser.balance,
+                    energy: energyData.current_energy,
+                    maxEnergy: energyData.max_energy,
+                    energyRegenRate: energyData.energy_regen_rate,
+                    perTap: 1,
+                    totalFarmed: existingUser.balance,
+                    referrals: referralCount,
+                    streak: existingUser.streak || 0
+                }
+            });
+        }
+        
+        // Process referral code if provided
+        let referrerId = null;
+        let referralBonus = 0;
+        
+        if (referralCode) {
+            console.log('🔍 Processing referral code:', referralCode);
+            
+            // Find referrer by user ID (referral code is the user ID)
+            const referrer = await db.getUser(parseInt(referralCode));
+            if (referrer) {
+                referrerId = referrer.user_id;
+                referralBonus = 50; // New user gets 50 SPUD
+                console.log('✅ Valid referral code, referrer found:', referrerId);
+            } else {
+                console.log('⚠️ Invalid referral code, no referrer found');
+            }
+        }
+        
+        // Create new user
+        console.log('🆕 Creating new user with data:', {
+            userId,
+            username: username || `user${userId}`,
+            firstName,
+            lastName,
+            referrerId,
+            initialBalance: referralBonus
+        });
+        
+        await db.createUser(
+            userId,
+            username || `user${userId}`,
+            firstName || 'User',
+            lastName || '',
+            referrerId
+        );
+        
+        // Add initial balance if there's referral bonus
+        if (referralBonus > 0) {
+            await db.updateUserBalance(userId, referralBonus);
+        }
+        
+        // Award referral bonus to referrer
+        if (referrerId) {
+            try {
+                // Add referral record
+                await db.addReferral(referrerId, userId);
+                
+                // Give bonus to referrer
+                await db.updateUserBalance(referrerId, 100); // Referrer gets 100 SPUD
+                console.log('🎁 Referral bonus awarded to referrer:', referrerId);
+                
+                // Try to send notification to referrer
+                try {
+                    if (bot.telegram) {
+                        await bot.telegram.sendMessage(referrerId, 
+                            `🎉 You just earned 100 SPUD from inviting a friend! 💰`
+                        );
+                    }
+                } catch (notifError) {
+                    console.log('📱 Cannot send referral notification:', notifError.message);
+                }
+            } catch (error) {
+                console.error('❌ Failed to award referral bonus:', error);
+            }
+        }
+        
+        // Create welcome mission
+        await db.updateUserMission(userId, 1, true, false);
+        
+        // Get final user data
+        const newUser = await db.getUser(userId);
+        const referralCount = await db.getReferralCount(userId);
+        const energyData = await db.getUserEnergy(userId);
+        
+        console.log('✅ User created successfully:', {
+            userId: newUser.user_id,
+            balance: newUser.balance,
+            referrals: referralCount
+        });
+        
+        res.json({
+            success: true,
+            data: {
+                balance: newUser.balance,
+                energy: energyData.current_energy,
+                maxEnergy: energyData.max_energy,
+                energyRegenRate: energyData.energy_regen_rate,
+                perTap: 1,
+                totalFarmed: newUser.balance,
+                referrals: referralCount,
+                streak: newUser.streak || 0
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ User creation error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to create user account'
+        });
+    }
+});
+
 app.get('/api/user', async (req, res) => {
     try {
         // Extract user ID and user data from Telegram Mini App data

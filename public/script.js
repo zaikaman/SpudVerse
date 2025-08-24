@@ -188,7 +188,6 @@ class SpudVerse {
         console.log('🔍 Debug - User data loading context:', {
             hasTelegram: !!this.tg,
             user: this.user,
-            referrerId: this.referrerId,
             initData: this.tg?.initData?.substring(0, 50) + '...',
             initDataUnsafe: this.tg?.initDataUnsafe
         });
@@ -208,7 +207,15 @@ class SpudVerse {
                 this.lastEnergyUpdate = Date.now();
                 console.log('✅ User data loaded from API');
             } else {
-                console.log('⚠️ API response not successful:', response);
+                console.log('⚠️ API response not successful - might be new user');
+                
+                // Check if this is a new user (401 Unauthorized)
+                if (response && response.error === 'Unauthorized') {
+                    console.log('🆕 New user detected, showing welcome modal');
+                    await this.showWelcomeModal();
+                    return; // Don't continue until user completes welcome
+                }
+                
                 console.log('⚠️ Falling back to mock data');
                 this.useMockData();
             }
@@ -218,6 +225,14 @@ class SpudVerse {
                 stack: error.stack,
                 name: error.name
             });
+            
+            // If it's a network error, might be new user
+            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                console.log('🆕 New user detected (from error), showing welcome modal');
+                await this.showWelcomeModal();
+                return;
+            }
+            
             console.log('📦 Using local/mock data due to API error');
             this.useMockData();
         }
@@ -1273,6 +1288,174 @@ class SpudVerse {
                 this.closeModal();
             }
         });
+    }
+
+    async showWelcomeModal() {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                backdrop-filter: blur(5px);
+            `;
+            
+            overlay.innerHTML = `
+                <div class="modal" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 20px;
+                    padding: 30px;
+                    max-width: 400px;
+                    width: 90%;
+                    color: white;
+                    text-align: center;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                    animation: modalSlideIn 0.3s ease-out;
+                ">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">🥔</div>
+                    <h2 style="margin: 0 0 10px 0; font-family: 'Comic Neue', cursive; font-size: 1.8rem;">
+                        Welcome to SpudVerse!
+                    </h2>
+                    <p style="margin: 0 0 25px 0; opacity: 0.9; line-height: 1.5;">
+                        Ready to start your potato farming adventure?
+                    </p>
+                    
+                    <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; margin-bottom: 25px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 1.1rem;">🎁 Got a Referral Code?</h3>
+                        <p style="margin: 0 0 15px 0; font-size: 0.9rem; opacity: 0.8;">
+                            Enter your friend's referral code to get bonus SPUD!
+                        </p>
+                        <input type="text" id="referral-code-input" placeholder="Enter referral code (optional)" 
+                               style="width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 16px; 
+                                      text-align: center; background: rgba(255,255,255,0.9); color: #333; 
+                                      box-sizing: border-box; margin-bottom: 10px;">
+                        <div style="font-size: 0.8rem; opacity: 0.7;">
+                            You'll get 50 SPUD, your friend gets 100 SPUD!
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; justify-content: center;">
+                        <button id="welcome-skip-btn" style="
+                            padding: 12px 25px;
+                            background: rgba(255,255,255,0.2);
+                            color: white;
+                            border: none;
+                            border-radius: 10px;
+                            cursor: pointer;
+                            font-family: 'Comic Neue', cursive;
+                            font-weight: 600;
+                            transition: all 0.3s ease;
+                        ">Skip</button>
+                        <button id="welcome-start-btn" style="
+                            padding: 12px 25px;
+                            background: #ff6b35;
+                            color: white;
+                            border: none;
+                            border-radius: 10px;
+                            cursor: pointer;
+                            font-family: 'Comic Neue', cursive;
+                            font-weight: 600;
+                            transition: all 0.3s ease;
+                        ">🚀 Start Farming!</button>
+                    </div>
+                </div>
+            `;
+            
+            // Add modal animation CSS
+            if (!document.querySelector('#modal-animation-style')) {
+                const style = document.createElement('style');
+                style.id = 'modal-animation-style';
+                style.textContent = `
+                    @keyframes modalSlideIn {
+                        from { transform: translateY(-50px) scale(0.9); opacity: 0; }
+                        to { transform: translateY(0) scale(1); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(overlay);
+            
+            // Set up event handlers
+            const input = document.getElementById('referral-code-input');
+            const skipBtn = document.getElementById('welcome-skip-btn');
+            const startBtn = document.getElementById('welcome-start-btn');
+            
+            // Skip button - create account without referral
+            skipBtn.addEventListener('click', async () => {
+                console.log('👤 User chose to skip referral code');
+                overlay.remove();
+                await this.createUserAccount(null);
+                resolve();
+            });
+            
+            // Start button - create account with referral code if provided
+            startBtn.addEventListener('click', async () => {
+                const referralCode = input.value.trim();
+                console.log('🚀 User starting with referral code:', referralCode || 'none');
+                
+                startBtn.textContent = '⏳ Creating account...';
+                startBtn.disabled = true;
+                
+                overlay.remove();
+                await this.createUserAccount(referralCode || null);
+                resolve();
+            });
+            
+            // Focus input
+            setTimeout(() => input.focus(), 300);
+            
+            // Handle Enter key
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    startBtn.click();
+                }
+            });
+        });
+    }
+
+    async createUserAccount(referralCode) {
+        console.log('🆕 Creating user account with referral code:', referralCode);
+        
+        try {
+            // Call backend to create user with referral code
+            const response = await this.apiCall('/api/user/create', 'POST', {
+                referralCode: referralCode
+            });
+            
+            if (response && response.success) {
+                console.log('✅ User account created successfully:', response.data);
+                this.gameData = { ...this.gameData, ...response.data };
+                
+                // Show success message
+                if (referralCode) {
+                    this.showToast('🎉 Account created! You got 50 SPUD bonus!', 'success');
+                } else {
+                    this.showToast('🎉 Welcome to SpudVerse!', 'success');
+                }
+                
+                // Initialize local energy tracking
+                this.lastEnergyUpdate = Date.now();
+                this.updateUI();
+                
+            } else {
+                console.error('❌ Failed to create user account:', response);
+                this.showToast('❌ Failed to create account. Please try again.', 'error');
+                this.useMockData();
+            }
+        } catch (error) {
+            console.error('❌ Error creating user account:', error);
+            this.showToast('❌ Network error. Using offline mode.', 'error');
+            this.useMockData();
+        }
     }
 
     closeModal() {
