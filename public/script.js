@@ -1355,24 +1355,27 @@ class SpudVerse {
             const response = await this.apiCall('/api/shop/buy', 'POST', { itemId });
 
             if (response && response.success) {
+                // Update balance and SPH from server response
                 this.gameData.balance = response.data.balance;
                 this.gameData.sph = response.data.sph;
 
-                // Safely update items state
-                if (Array.isArray(response.data.items)) {
-                    this.gameData.items = response.data.items;
-                } else {
-                    // Fallback if API doesn't return full items list
-                    console.warn("API did not return items list. Updating manually.");
-                    const userItems = Array.isArray(this.gameData.items) ? this.gameData.items : [];
-                    const ownedItem = userItems.find(i => i.id === itemId);
-                    if (ownedItem) {
-                        ownedItem.count++;
-                    } else {
-                        userItems.push({ id: itemId, count: 1 });
-                    }
-                    this.gameData.items = userItems;
+                // --- Client-side item state management ---
+                // Ensure gameData.items is a valid array
+                if (!Array.isArray(this.gameData.items)) {
+                    this.gameData.items = [];
                 }
+
+                // Find the item in the local state
+                const ownedItem = this.gameData.items.find(i => i.id === itemId);
+
+                if (ownedItem) {
+                    // If item exists, increment its count
+                    ownedItem.count++;
+                } else {
+                    // If item doesn't exist, add it to the array
+                    this.gameData.items.push({ id: itemId, count: 1 });
+                }
+                // --- End of client-side management ---
 
                 this.updateUI();
                 this.loadShopItems();
