@@ -65,7 +65,7 @@ class SpudVerse {
 
         try {
             // Call backend to securely level up the user
-            const response = await this.apiCall('/api/user/level-up', 'POST', { newLevel: nextLevel.level });
+            const response = await this.apiCall('/api/user/level-up', 'POST');
 
             if (response && response.success) {
                 // Update game data with the new values from the server
@@ -73,6 +73,9 @@ class SpudVerse {
                 this.gameData.perTap = response.data.per_tap;
                 this.gameData.maxEnergy = response.data.max_energy;
                 this.gameData.energy = response.data.energy; // Energy is refilled on level up
+                if (response.data.energy_regen_rate) {
+                    this.gameData.energyRegenRate = response.data.energy_regen_rate;
+                }
 
                 // Update UI and show effects
                 this.updateUI();

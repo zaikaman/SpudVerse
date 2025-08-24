@@ -315,30 +315,57 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Custom type for level structure
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'level_requirements') THEN
+        CREATE TYPE level_requirements AS (
+            level INTEGER,
+            requiredFarmed BIGINT,
+            perTapBonus INTEGER,
+            maxEnergyBonus INTEGER
+        );
+    END IF;
+END$$;
+
 -- Function to level up a user
 CREATE OR REPLACE FUNCTION level_up_user(p_user_id BIGINT, p_new_level INTEGER)
 RETURNS JSON AS $$
 DECLARE
     user_record RECORD;
-    level_info RECORD;
-    levels JSONB := '[
-        {"level": 1, "requiredFarmed": 0, "perTapBonus": 1, "maxEnergyBonus": 100},
-        {"level": 2, "requiredFarmed": 1000, "perTapBonus": 2, "maxEnergyBonus": 150},
-        {"level": 3, "requiredFarmed": 5000, "perTapBonus": 3, "maxEnergyBonus": 200},
-        {"level": 4, "requiredFarmed": 15000, "perTapBonus": 5, "maxEnergyBonus": 250},
-        {"level": 5, "requiredFarmed": 50000, "perTapBonus": 8, "maxEnergyBonus": 350},
-        {"level": 6, "requiredFarmed": 150000, "perTapBonus": 12, "maxEnergyBonus": 500},
-        {"level": 7, "requiredFarmed": 500000, "perTapBonus": 20, "maxEnergyBonus": 750}
-    ]';
+    level_info level_requirements;
+    levels level_requirements[] := ARRAY[
+        (1, 0, 1, 100),
+        (2, 1000, 2, 150),
+        (3, 5000, 3, 200),
+        (4, 15000, 5, 250),
+        (5, 50000, 8, 350),
+        (6, 150000, 12, 500),
+        (7, 500000, 20, 750)
+    ]::level_requirements[];
+    i INTEGER;
 BEGIN
     -- Get user data
     SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
 
     -- Find the level info for the new level
-    SELECT * INTO level_info FROM jsonb_to_recordset(levels) AS x(level INTEGER, requiredFarmed BIGINT, perTapBonus INTEGER, maxEnergyBonus INTEGER) WHERE level = p_new_level;
+    level_info := NULL;
+    FOREACH level_info IN ARRAY levels LOOP
+        IF level_info.level = p_new_level THEN
+            EXIT;
+        END IF;
+        level_info := NULL;
+    END LOOP;
 
     IF level_info IS NULL THEN
-        RETURN json_build_object('success', false, 'error', 'Invalid level');
+        RETURN json_build_object(
+            'success', false, 
+            'error', 'Invalid level',
+            'details', json_build_object(
+                'current_level', user_record.level,
+                'attempted_level', p_new_level
+            )
+        );
     END IF;
 
     -- Check if user has enough farmed total and is at the correct previous level
