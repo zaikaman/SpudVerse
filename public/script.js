@@ -1320,8 +1320,16 @@ class SpudVerse {
     }
 
     async buyShopItem(itemId) {
+        if (!this.shopItems || !Array.isArray(this.shopItems)) {
+            this.showToast("Đang tải dữ liệu shop, vui lòng thử lại sau.", "error");
+            return;
+        }
+
         const item = this.shopItems.find(i => i.id === itemId);
-        if (!item) return;
+        if (!item) {
+            this.showToast("Không tìm thấy item.", "error"); 
+            return;
+        }
 
         const ownedItem = this.gameData.items.find(i => i.id === item.id);
         const count = ownedItem ? ownedItem.count : 0;
