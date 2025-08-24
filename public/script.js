@@ -465,7 +465,7 @@ class SpudVerse {
         const tapEffect = document.getElementById('tap-effect');
         const effectText = document.createElement('div');
         effectText.className = 'tap-effect-text';
-        effectText.textContent = `+${amount} SPUD 🔥`;
+        effectText.textContent = `+${amount} SPUD Points 🔥`;
         effectText.style.cssText = `
             position: absolute;
             font-weight: 700;
@@ -759,7 +759,7 @@ class SpudVerse {
                         <div class="mission-title">${mission.title}</div>
                         <div class="mission-desc">${mission.description}</div>
                     </div>
-                    <div class="mission-reward">+${this.formatNumber(mission.reward)} SPUD</div>
+                    <div class="mission-reward">+${this.formatNumber(mission.reward)} SPUD Points</div>
                 </div>
                 <div class="mission-footer">
                     <div class="mission-status ${statusClass}">${statusText}</div>
@@ -1180,7 +1180,7 @@ class SpudVerse {
                 console.log(`📋 Missions after reload:`, this.gameData.missions.find(m => m.id === missionId));
                 this.renderMissions();
                 
-                this.showToast(`🎉 You earned ${this.formatNumber(mission.reward)} SPUD!`, 'success');
+                this.showToast(`🎉 You earned ${this.formatNumber(mission.reward)} SPUD Points!`, 'success');
                 this.confettiEffect();
             } else {
                 // Revert if claim failed
@@ -1266,7 +1266,7 @@ class SpudVerse {
                         <div class="player-level">${player.level}</div>
                     </div>
                 </div>
-                <div class="player-score">${this.formatNumber(player.balance)} SPUD</div>
+                <div class="player-score">${this.formatNumber(player.balance)} SPUD Points</div>
             `;
 
             container.appendChild(item);
@@ -1317,7 +1317,7 @@ class SpudVerse {
         const userId = this.user?.id || 12345;
         const referralCode = userId.toString();
         const botLink = `https://t.me/spudverse_bot`;
-        const shareText = `🥔 Join me in SpudVerse! 🌱\n\nTap potatoes, earn SPUD coins, and become a farming legend!\n\n🎁 My referral code: ${referralCode}\n\nHow to join:\n1. Click: ${botLink}\n2. Enter my code: ${referralCode}\n3. Get 50 SPUD bonus!\n\nStart farming now! 🚀`;
+        const shareText = `🥔 Join me in SpudVerse! 🌱\n\nTap potatoes, earn SPUD Points, and become a farming legend!\n\n🎁 My referral code: ${referralCode}\n\nHow to join:\n1. Click: ${botLink}\n2. Enter my code: ${referralCode}\n3. Get 50 SPUD Points bonus!\n\nStart farming now! 🚀`;
 
         if (this.tg) {
             // Share with bot link and referral code
@@ -1392,14 +1392,14 @@ class SpudVerse {
                     <div style="background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; margin-bottom: 25px;">
                         <h3 style="margin: 0 0 15px 0; font-size: 1.1rem;">🎁 Got a Referral Code?</h3>
                         <p style="margin: 0 0 15px 0; font-size: 0.9rem; opacity: 0.8;">
-                            Enter your friend's referral code to get bonus SPUD!
+                            Enter your friend's referral code to get bonus SPUD Points!
                         </p>
                         <input type="text" id="referral-code-input" placeholder="Enter referral code (optional)" 
                                style="width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 16px; 
                                       text-align: center; background: rgba(255,255,255,0.9); color: #333; 
                                       box-sizing: border-box; margin-bottom: 10px;">
                         <div style="font-size: 0.8rem; opacity: 0.7;">
-                            You'll get 50 SPUD, your friend gets 100 SPUD!
+                            You'll get 50 SPUD Points, your friend gets 100 SPUD Points!
                         </div>
                     </div>
                     
@@ -1498,7 +1498,7 @@ class SpudVerse {
                 
                 // Show success message
                 if (referralCode) {
-                    this.showToast('🎉 Account created! You got 50 SPUD bonus!', 'success');
+                    this.showToast('🎉 Account created! You got 50 SPUD Points bonus!', 'success');
                 } else {
                     this.showToast('🎉 Welcome to SpudVerse!', 'success');
                 }
@@ -1563,7 +1563,7 @@ class SpudVerse {
             this.syncTimeout = null;
         }
         
-        console.log(`🔄 Syncing ${amount} SPUD to backend...`);
+        console.log(`🔄 Syncing ${amount} SPUD Points to backend...`);
         
         try {
             const response = await this.apiCall('/api/tap', 'POST', { amount: amount });
@@ -1588,7 +1588,7 @@ class SpudVerse {
                             
                             // Award achievement reward
                             if (achievement.reward > 0) {
-                                this.showToast(`🎁 Achievement reward: +${achievement.reward} SPUD!`, 'success');
+                                this.showToast(`🎁 Achievement reward: +${achievement.reward} SPUD Points!`, 'success');
                             }
                         }
                     }
