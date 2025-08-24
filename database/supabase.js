@@ -796,8 +796,17 @@ class SupabaseDatabase {
         try {
             const { data, error } = await this.client
                 .from('shop_items')
-                .select('*')
-                .order('id');
+                .select(`
+                    id,
+                    name,
+                    cost,
+                    profit,
+                    scaling,
+                    icon,
+                    category
+                `)
+                .order('category', {ascending: true}) // Sắp xếp theo category
+                .order('cost', {ascending: true}); // Sau đó sắp xếp theo giá
 
             if (error) {
                 console.error('Supabase getShopItems error:', error);
