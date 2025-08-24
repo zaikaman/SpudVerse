@@ -1530,9 +1530,22 @@ class SpudVerse {
             };
 
             // Add authorization header with Telegram data
-            if (this.tg && this.tg.initData) {
-                options.headers['Authorization'] = `tma ${this.tg.initData}`;
+            if (this.tg) {
+                // Always try to send Telegram auth data, even if empty
+                const initData = this.tg.initData || '';
+                options.headers['Authorization'] = `tma ${initData}`;
+                
+                console.log('🔐 Auth Debug:', {
+                    hasTelegram: !!this.tg,
+                    hasInitData: !!this.tg.initData,
+                    initDataLength: initData.length,
+                    initDataPreview: initData.substring(0, 100) + '...',
+                    user: this.user,
+                    referrerId: this.referrerId
+                });
             } else {
+                console.log('🔧 Development mode - no Telegram WebApp');
+                
                 // Fallback for development - add referral data as query params
                 if (method === 'GET' && this.referrerId) {
                     const separator = url.includes('?') ? '&' : '?';
