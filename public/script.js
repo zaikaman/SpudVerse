@@ -581,16 +581,15 @@ class SpudVerse {
         // Haptic feedback
         this.vibrate();
 
-        // Check for level up
-        this.checkForLevelUp();
-
         // Save progress
         this.saveProgress();
 
-        // Add to pending taps for batch processing
-        // Track actual tap count for energy consumption
+        // Add tap to batch and sync with backend
         this.pendingTaps += 1; // Only count 1 tap regardless of SPUD earned
-        this.scheduleTapSync();
+        await this.scheduleTapSync(); // Wait for sync to complete
+
+        // Let backend handle level up - we'll get updated stats in the sync response
+        await this.loadUserData(); // Reload user data to get new level if any
     }
 
     createTapEffect(event, amount) {
@@ -1982,19 +1981,24 @@ class SpudVerse {
         console.log('🏆 Achievement checking moved to backend API');
     }
 
-    scheduleTapSync() {
+    async scheduleTapSync() {
         const now = Date.now();
         
         // If we have pending taps and enough time has passed, sync immediately
         if (this.pendingTaps > 0 && (now - this.lastSyncTime) >= this.syncInterval) {
-            this.syncTapsToBackend();
+            await this.syncTapsToBackend();
+            return;
         }
+        
         // Otherwise, schedule a sync if not already scheduled
-        else if (this.pendingTaps > 0 && !this.syncTimeout) {
+        if (this.pendingTaps > 0 && !this.syncTimeout) {
             const timeToWait = this.syncInterval - (now - this.lastSyncTime);
-            this.syncTimeout = setTimeout(() => {
-                this.syncTapsToBackend();
-            }, Math.max(100, timeToWait));
+            return new Promise((resolve) => {
+                this.syncTimeout = setTimeout(async () => {
+                    await this.syncTapsToBackend();
+                    resolve();
+                }, Math.max(100, timeToWait));
+            });
         }
     }
 
