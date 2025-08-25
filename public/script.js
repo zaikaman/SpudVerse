@@ -301,7 +301,16 @@ class SpudVerse {
         console.log('🔄 Loading user data from Supabase...');
         
         try {
+            console.log('📤 Making API call to /api/user...');
             const response = await this.apiCall('/api/user', 'GET');
+            console.log('📥 API Response:', response);
+            
+            // Add specific 404 check
+            if (response?.status === 404 || response?.statusCode === 404) {
+                console.log('🆕 New user detected (404 response), showing welcome modal');
+                await this.showWelcomeModal();
+                return;
+            }
             
             if (response && response.success) {
                 console.log('✅ Supabase data loaded successfully:', response.data);
@@ -324,8 +333,9 @@ class SpudVerse {
 
                 this.lastEnergyUpdate = Date.now();
             } else {
-                if (response && (response.error === 'User not found' || response.status === 404)) {
-                    console.log('🆕 New user detected, showing welcome modal');
+                // Additional check for user not found in error message
+                if (response?.error?.toLowerCase?.()?.includes('not found')) {
+                    console.log('🆕 New user detected (error message), showing welcome modal');
                     await this.showWelcomeModal();
                     return;
                 }
@@ -1745,9 +1755,12 @@ class SpudVerse {
     }
 
     async showWelcomeModal() {
+        console.log('📝 Attempting to show welcome modal...');
         return new Promise((resolve) => {
+            console.log('🎨 Creating welcome modal elements...');
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
+            console.log('💅 Setting modal styles...');
             overlay.style.cssText = `
                 position: fixed;
                 top: 0;
