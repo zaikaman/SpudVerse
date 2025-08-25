@@ -137,7 +137,12 @@ class SpudVerse {
                 case 'exists':
                     // --- Continue for existing users ---
                     console.log('✅ User exists. Proceeding with initialization.');
-                    await this.loadUserAchievements();
+                    try {
+                        await this.loadUserAchievements();
+                    } catch (e) {
+                        console.error("⚠️ Non-critical error: Failed to load user achievements.", e);
+                        this.showToast("Could not load achievements, but you can still play.", "warning");
+                    }
                     this.setupEventListeners();
                     this.startEnergyRegen();
                     this.startSPHInterval();
@@ -311,45 +316,64 @@ class SpudVerse {
         }, 500);
     }
 
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async loadUserData() {
         console.log('🔄 Loading user data...');
-        try {
-            const response = await this.apiCall('/api/user', 'GET');
+        const maxRetries = 3;
+        const retryDelay = 2000; // 2 seconds
 
-            // Case 1: New user detected
-            if (response === null || response?.status === 404 || response?.statusCode === 404 || response?.error?.toLowerCase?.()?.includes('not found')) {
-                console.log('🆕 New user detected, returning \'new\'');
-                return 'new';
-            }
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const response = await this.apiCall('/api/user', 'GET');
 
-            // Case 2: Successful data load for existing user
-            if (response && response.success) {
-                console.log('✅ User data loaded successfully:', response.data);
-                this.gameData.balance = response.data.balance ?? 0;
-                this.gameData.energy = response.data.energy ?? 100;
-                this.gameData.maxEnergy = response.data.maxEnergy ?? 100;
-                this.gameData.energyRegenRate = response.data.energyRegenRate ?? 1;
-                this.gameData.perTap = response.data.perTap ?? 1;
-                this.gameData.level = response.data.level ?? 1;
-                this.gameData.totalFarmed = response.data.totalFarmed ?? 0;
-                this.gameData.sph = response.data.sph ?? 0;
-                this.gameData.items = response.data.items ?? [];
-                this.gameData.streak = response.data.streak ?? 0;
-                this.gameData.bestStreak = response.data.bestStreak ?? 0;
-                this.lastEnergyUpdate = Date.now();
-                return 'exists';
+                // Case 1: New user detected
+                if (response === null || response?.status === 404 || response?.statusCode === 404 || response?.error?.toLowerCase?.()?.includes('not found')) {
+                    console.log('🆕 New user detected, returning \'new\'');
+                    return 'new';
+                }
+
+                // Case 2: Successful data load for existing user
+                if (response && response.success) {
+                    console.log('✅ User data loaded successfully:', response.data);
+                    this.gameData.balance = response.data.balance ?? 0;
+                    this.gameData.energy = response.data.energy ?? 100;
+                    this.gameData.maxEnergy = response.data.maxEnergy ?? 100;
+                    this.gameData.energyRegenRate = response.data.energyRegenRate ?? 1;
+                    this.gameData.perTap = response.data.perTap ?? 1;
+                    this.gameData.level = response.data.level ?? 1;
+                    this.gameData.totalFarmed = response.data.totalFarmed ?? 0;
+                    this.gameData.sph = response.data.sph ?? 0;
+                    this.gameData.items = response.data.items ?? [];
+                    this.gameData.streak = response.data.streak ?? 0;
+                    this.gameData.bestStreak = response.data.bestStreak ?? 0;
+                    this.lastEnergyUpdate = Date.now();
+                    return 'exists';
+                }
+                
+                // Case 3: API call failed for other reasons, but we will retry
+                console.warn(`Attempt ${attempt}: API call to /api/user failed with an unexpected response:`, response);
+                if (attempt === maxRetries) {
+                    this.showToast('Could not load your profile. Please try again later.', 'error');
+                    return 'error';
+                }
+
+            } catch (error) {
+                console.error(`Attempt ${attempt}: API call to /api/user threw an exception:`, error);
+                if (attempt === maxRetries) {
+                    this.showToast('Could not connect to the server. Please check your connection.', 'error');
+                    return 'error';
+                }
             }
             
-            // Case 3: API call failed for other reasons
-            console.error('❌ API call to /api/user failed with an unexpected response:', response);
-            this.showToast('Could not load your profile. Please try again later.', 'error');
-            return 'error';
-
-        } catch (error) {
-            console.error('❌ API call to /api/user threw an exception:', error);
-            this.showToast('Could not connect to the server. Please check your connection.', 'error');
-            return 'error';
+            console.log(`Waiting ${retryDelay}ms before next attempt...`);
+            await this.sleep(retryDelay);
         }
+        
+        // This part should not be reached, but as a fallback
+        return 'error';
     }
 
     async loadUserAchievements() {
