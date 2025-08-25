@@ -390,50 +390,6 @@ class SpudVerse {
         }
     }
 
-    async showAchievements() {
-        if (this.allAchievements.length === 0) {
-            await this.loadAllAchievements();
-        }
-
-        const modal = document.getElementById('achievements-list-modal');
-        const container = document.getElementById('achievements-list-container');
-        
-        container.innerHTML = ''; // Clear previous content
-
-        if (this.allAchievements.length === 0) {
-            container.innerHTML = '<p>Could not load achievements. Please try again later.</p>';
-            modal.style.display = 'block';
-            return;
-        }
-
-        this.allAchievements.forEach(ach => {
-            const isUnlocked = this.userAchievements.includes(ach.id);
-            const card = document.createElement('div');
-            card.className = `achievement-card ${isUnlocked ? 'unlocked' : 'locked'}`;
-            
-            card.innerHTML = `
-                <div class="achievement-icon">${ach.icon}</div>
-                <div class="achievement-info">
-                    <div class="achievement-title">${ach.title}</div>
-                    <div class="achievement-desc">${ach.description}</div>
-                </div>
-                <div class="achievement-status">
-                    ${isUnlocked ? '✅ Unlocked' : '🔒 Locked'}
-                </div>
-            `;
-            container.appendChild(card);
-        });
-
-        modal.style.display = 'block';
-
-        // Add click outside to close
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.closeModal();
-            }
-        });
-    }
-
     closeModal() {
         document.querySelectorAll('.modal').forEach(modal => {
             modal.style.display = 'none';
@@ -1838,7 +1794,7 @@ class SpudVerse {
         }
 
         this.allAchievements.forEach(ach => {
-            const isUnlocked = this.userAchievements.includes(ach.id);
+            const isUnlocked = ach.unlocked;
             const card = document.createElement('div');
             card.className = `achievement-card ${isUnlocked ? 'unlocked' : 'locked'}`;
             
