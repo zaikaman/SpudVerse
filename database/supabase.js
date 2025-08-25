@@ -29,19 +29,33 @@ class SupabaseDatabase {
         }
         
         try {
+            console.log(`[DEBUG] process_tap - User ID: ${userId}, Tap Count: ${tapCount}, SPUD Amount: ${spudAmount}`);
+            
             const { data, error } = await this.client
-                .rpc('process_tap', {
-                    p_user_id: userId,
-                    p_tap_count: tapCount,
-                    p_spud_amount: spudAmount
-                });
+                .from('users')
+                .update({
+                    balance: spudAmount,
+                    total_farmed: spudAmount,
+                    last_tap_time: new Date().toISOString()
+                })
+                .eq('user_id', userId)
+                .select()
+                .single();
 
             if (error) {
                 console.error('Process tap error:', error);
                 return { success: false, error: error.message };
             }
 
-            return data;
+            return {
+                success: true,
+                balance: data.balance,
+                total_farmed: data.total_farmed,
+                earned: spudAmount,
+                current_energy: data.current_energy,
+                max_energy: data.max_energy,
+                time_to_full: 0
+            };
         } catch (error) {
             console.error('Process tap error:', error);
             return { success: false, error: error.message };
