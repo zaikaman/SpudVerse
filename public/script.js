@@ -2035,11 +2035,6 @@ class SpudVerse {
                         if (!this.userAchievements.includes(achievement.id)) {
                             this.showAchievementUnlocked(achievement);
                             this.userAchievements.push(achievement.id); // Track it
-                            
-                            // Award achievement reward
-                            if (achievement.reward > 0) {
-                                this.showToast(`🎁 Achievement reward: +${achievement.reward} SPUD Points!`, 'success');
-                            }
                         }
                     }
                 }
@@ -2074,7 +2069,7 @@ class SpudVerse {
     showAchievementUnlocked(achievement) {
         // Update modal content
         document.querySelector('.achievement-title').textContent = achievement.title;
-        document.querySelector('.achievement-desc').textContent = achievement.desc;
+        document.querySelector('.achievement-desc').textContent = achievement.description;
         
         // Show modal
         const modal = document.getElementById('achievement-modal');
@@ -2082,6 +2077,7 @@ class SpudVerse {
         
         // Confetti effect
         this.confettiEffect();
+        this.showToast(`🎉 Achievement Unlocked: ${achievement.title}`, 'success');
         this.vibrate();
     }
 

@@ -486,6 +486,12 @@ class SupabaseDatabase {
                 .single();
                 
             if (error) {
+                if (error.code === '23505') {
+                    // This is the duplicate key error, likely from a race condition.
+                    // We can safely ignore it and return null, as another process already unlocked it.
+                    console.log(`[info] Race condition handled: Achievement (user: ${userId}, achievement: ${achievementId}) was already unlocked.`);
+                    return null;
+                }
                 console.error('Supabase unlockAchievement error:', error);
                 return null;
             }
