@@ -1472,11 +1472,12 @@ class SpudVerse {
             const response = await this.apiCall('/api/shop/buy', 'POST', { itemId });
 
             if (response && response.success) {
-                console.log('[buyShopItem] response:', response);
+                console.log('[buyShopItem] full response:', JSON.stringify(response));
+                console.log('[buyShopItem] response.new_sph:', response.new_sph);
                 // Update balance and SPH from server response
                 this.gameData.balance = response.new_balance ?? this.gameData.balance;
                 this.gameData.sph = response.new_sph ?? this.gameData.sph;
-                console.log('[buyShopItem] new sph:', this.gameData.sph);
+                console.log('[buyShopItem] new sph after assignment:', this.gameData.sph);
                 this.showToast(`New SPH: ${this.gameData.sph}`, 'info');
 
                 // --- Client-side item state management ---
