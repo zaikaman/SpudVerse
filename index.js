@@ -392,7 +392,7 @@ app.post('/api/tap', async (req, res) => {
         const responseData = {
             balance: userStats.balance,
             total_farmed: userStats.total_farmed,
-            earned: tapAmount,
+            earned: spudAmount, // Use spudAmount from request instead of undefined tapAmount
             energy: energyResult.current_energy,
             maxEnergy: energyResult.max_energy,
             timeToFull: energyResult.time_to_full,
