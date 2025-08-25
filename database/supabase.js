@@ -23,6 +23,31 @@ class SupabaseDatabase {
     }
 
     // User methods
+    async process_tap(userId, tapCount, spudAmount) {
+        if (!this.client) {
+            return { success: false, error: 'No database connection' };
+        }
+        
+        try {
+            const { data, error } = await this.client
+                .rpc('process_tap', {
+                    p_user_id: userId,
+                    p_tap_count: tapCount,
+                    p_spud_amount: spudAmount
+                });
+
+            if (error) {
+                console.error('Process tap error:', error);
+                return { success: false, error: error.message };
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Process tap error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     async getUser(userId) {
         if (!this.client) return null;
         
