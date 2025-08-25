@@ -1471,20 +1471,13 @@ class SpudVerse {
             return;
         }
 
-        // Optimistic UI Update
-        const profit = item.profit;
-        this.gameData.balance -= currentCost;
-        this.gameData.sph += profit;
-        this.updateUI(); // Update UI immediately
-
         try {
             const response = await this.apiCall('/api/shop/buy', 'POST', { itemId });
 
             if (response && response.success) {
-                // Server-side state reconciliation
+                // Update balance and SPH from server response
                 this.gameData.balance = response.new_balance ?? this.gameData.balance;
                 this.gameData.sph = response.new_sph ?? this.gameData.sph;
-                
                 // Ensure gameData.items is a valid array
                 if (!Array.isArray(this.gameData.items)) {
                     this.gameData.items = [];
@@ -1502,24 +1495,14 @@ class SpudVerse {
                 }
                 // --- End of client-side management ---
 
-                this.updateUI(); // Re-sync with server state
-                this.loadShopItems(); // Reload shop to show new costs/counts
+                this.updateUI();
+                this.loadShopItems();
                 this.showToast(`Purchased ${item.name}!`, 'success');
             } else {
-                // Revert optimistic update on failure
-                this.gameData.balance += currentCost;
-                this.gameData.sph -= profit;
-                this.updateUI();
-
                 const debugMsg = `Buy API error: ${response?.error || 'Unknown'} | Raw: ${JSON.stringify(response)}`;
                 this.showToast(debugMsg, 'error');
             }
         } catch (error) {
-            // Revert optimistic update on error
-            this.gameData.balance += currentCost;
-            this.gameData.sph -= profit;
-            this.updateUI();
-
             console.error('Error buying item:', error);
             const debugMsg = `JS error during purchase: ${error?.message || error}`;
             this.showToast(debugMsg, 'error');
