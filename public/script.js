@@ -33,6 +33,7 @@ class SpudVerse {
         
         // Achievement tracking
         this.userAchievements = []; // Store unlocked achievement IDs
+        this.allAchievements = []; // Store all achievements
         
         // Local energy regeneration tracking
         this.lastEnergyUpdate = Date.now();
@@ -359,19 +360,84 @@ class SpudVerse {
             
             if (response && response.success) {
                 // Store unlocked achievement IDs
-                this.userAchievements = response.data
-                    .filter(ach => ach.unlocked)
-                    .map(ach => ach.id);
+                this.userAchievements = response.data.map(ach => ach.achievement_id);
                     
-                console.log('✅ Loaded achievements:', this.userAchievements.length, 'unlocked');
+                console.log('✅ Loaded user achievements:', this.userAchievements.length, 'unlocked');
             } else {
-                console.warn('⚠️ Failed to load achievements from API');
+                console.warn('⚠️ Failed to load user achievements from API');
                 this.userAchievements = [];
             }
         } catch (error) {
-            console.error('❌ Failed to load achievements:', error);
+            console.error('❌ Failed to load user achievements:', error);
             this.userAchievements = [];
         }
+    }
+
+    async loadAllAchievements() {
+        try {
+            console.log('🏆 Loading all achievements...');
+            const response = await this.apiCall('/api/achievements/all', 'GET'); // Assuming this endpoint exists
+            if (response && response.success) {
+                this.allAchievements = response.data;
+                console.log('✅ Loaded all achievements:', this.allAchievements.length);
+            } else {
+                console.warn('⚠️ Failed to load all achievements from API');
+                this.allAchievements = [];
+            }
+        } catch (error) {
+            console.error('❌ Failed to load all achievements:', error);
+            this.allAchievements = [];
+        }
+    }
+
+    async showAchievements() {
+        if (this.allAchievements.length === 0) {
+            await this.loadAllAchievements();
+        }
+
+        const modal = document.getElementById('achievements-list-modal');
+        const container = document.getElementById('achievements-list-container');
+        
+        container.innerHTML = ''; // Clear previous content
+
+        if (this.allAchievements.length === 0) {
+            container.innerHTML = '<p>Could not load achievements. Please try again later.</p>';
+            modal.style.display = 'block';
+            return;
+        }
+
+        this.allAchievements.forEach(ach => {
+            const isUnlocked = this.userAchievements.includes(ach.id);
+            const card = document.createElement('div');
+            card.className = `achievement-card ${isUnlocked ? 'unlocked' : 'locked'}`;
+            
+            card.innerHTML = `
+                <div class="achievement-icon">${ach.icon}</div>
+                <div class="achievement-info">
+                    <div class="achievement-title">${ach.title}</div>
+                    <div class="achievement-desc">${ach.description}</div>
+                </div>
+                <div class="achievement-status">
+                    ${isUnlocked ? '✅ Unlocked' : '🔒 Locked'}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        modal.style.display = 'block';
+
+        // Add click outside to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeModal();
+            }
+        });
+    }
+
+    closeModal() {
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.style.display = 'none';
+        });
     }
 
     useMockData() {

@@ -112,6 +112,16 @@ app.post('/api/tap', async (req, res) => {
     }
 });
 
+app.get('/api/achievements/all', async (req, res) => {
+    try {
+        const achievements = await db.getAchievements();
+        res.json({ success: true, data: achievements });
+    } catch (error) {
+        console.error('Achievements API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 app.get('/api/missions', async (req, res) => {
     try {
         const userId = getUserIdFromRequest(req);
