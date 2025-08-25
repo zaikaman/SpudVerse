@@ -129,14 +129,21 @@ class SpudVerse {
             // Show loading screen immediately
             this.showLoading();
 
-            // Initialize Telegram WebApp
+            // Initialize Telegram WebApp and wait for data
             this.initTelegram();
-
-            // Wait for Telegram initData to be available
             await this.waitForTelegramData();
             
-            // Load user data
-            await this.loadUserData();
+            // Load user data and check if user is new
+            const isExistingUser = await this.loadUserData();
+            
+            // If new user, show welcome modal and stop init flow.
+            // The rest of the initialization will be handled by createUserAccount.
+            if (!isExistingUser) {
+                await this.showWelcomeModal();
+                return; // Stop here
+            }
+            
+            // --- Continue for existing users ---
             
             // Load user achievements 
             await this.loadUserAchievements();
@@ -150,7 +157,7 @@ class SpudVerse {
             // Start SPH interval
             this.startSPHInterval();
 
-            // Update the UI with all loaded data before showing the game
+            // Update the UI with all loaded data
             this.updateUI();
 
             // Hide loading and show game
@@ -159,7 +166,8 @@ class SpudVerse {
             // Set up global error handlers for debugging
             this.setupGlobalErrorHandlers();
             
-            console.log('🚀 SpudVerse ready!');
+            console.log('🚀 SpudVerse ready for existing user!');
+            
         } catch (error) {
             console.error('💥 SpudVerse initialization failed:', error);
             
@@ -302,24 +310,20 @@ class SpudVerse {
     }
 
     async loadUserData() {
-        console.log('🔄 Loading user data from Supabase...');
-        
+        console.log('🔄 Loading user data...');
         try {
-            console.log('📤 Making API call to /api/user...');
             const response = await this.apiCall('/api/user', 'GET');
-            console.log('📥 API Response:', response);
             
-            // Add specific 404 check
-            if (response?.status === 404 || response?.statusCode === 404) {
-                console.log('🆕 New user detected (404 response), showing welcome modal');
-                await this.showWelcomeModal();
-                return;
+            // New user detected
+            if (response?.status === 404 || response?.statusCode === 404 || response?.error?.toLowerCase?.()?.includes('not found')) {
+                console.log('🆕 New user detected, returning false.');
+                return false; // Signal that user is new
             }
             
             if (response && response.success) {
-                console.log('✅ Supabase data loaded successfully:', response.data);
+                console.log('✅ User data loaded successfully:', response.data);
                 
-                // Map Supabase data to gameData structure
+                // Map server data to gameData structure
                 this.gameData.balance = response.data.balance ?? 0;
                 this.gameData.energy = response.data.energy ?? 100;
                 this.gameData.maxEnergy = response.data.maxEnergy ?? 100;
@@ -329,30 +333,23 @@ class SpudVerse {
                 this.gameData.totalFarmed = response.data.totalFarmed ?? 0;
                 this.gameData.sph = response.data.sph ?? 0;
                 this.gameData.items = response.data.items ?? [];
-                
-                // Make sure to update UI with new perTap value
-                this.updateFarmStats();
                 this.gameData.streak = response.data.streak ?? 0;
                 this.gameData.bestStreak = response.data.bestStreak ?? 0;
 
                 this.lastEnergyUpdate = Date.now();
+                return true; // Signal that user exists
             } else {
-                // Additional check for user not found in error message
-                if (response?.error?.toLowerCase?.()?.includes('not found')) {
-                    console.log('🆕 New user detected (error message), showing welcome modal');
-                    await this.showWelcomeModal();
-                    return;
-                }
-                
-                console.warn('⚠️ Could not load user data from Supabase, falling back to mock data.', response?.error);
+                console.warn('⚠️ Could not load user data, using mock data.', response?.error);
                 this.useMockData();
+                return true; // Assume existing user with mock data
             }
         } catch (error) {
-        console.error('❌ API call to /api/user failed:', error);
-        this.showToast('Could not connect to the server. Using offline mode.', 'error');
-        this.useMockData();
-    }
-}    async loadUserAchievements() {
+            console.error('❌ API call to /api/user failed:', error);
+            this.showToast('Could not connect to the server. Using offline mode.', 'error');
+            this.useMockData();
+            return true; // Assume existing user with mock data
+        }
+    }    async loadUserAchievements() {
         try {
             console.log('🏆 Loading user achievements...');
             
@@ -1919,22 +1916,45 @@ class SpudVerse {
                     this.showToast('🎉 Welcome to SpudVerse!', 'success');
                 }
                 
+                // --- Finish initialization for the new user ---
+                console.log('🚀 Finishing initialization for new user...');
+                
                 // Initialize local energy tracking
                 this.lastEnergyUpdate = Date.now();
-                this.updateUI();
                 
-                // Now that user is created, start backend energy sync
-                console.log('🔄 Starting backend energy sync for new user');
-                this.startBackendEnergySync();
+                // Load achievements (might be some for new users)
+                await this.loadUserAchievements();
+                
+                // Setup event listeners
+                this.setupEventListeners();
+                
+                // Start energy regeneration
+                this.startEnergyRegen();
+                
+                // Start SPH interval
+                this.startSPHInterval();
+
+                // Update the UI with all loaded data
+                this.updateUI();
+
+                // Hide loading and show game
+                this.hideLoading();
+                
+                // Set up global error handlers
+                this.setupGlobalErrorHandlers();
+                
+                console.log('🚀 SpudVerse ready for new user!');
                 
             } else {
                 console.error('❌ Failed to create user account:', response);
                 this.showToast('❌ Failed to create account. Please try again.', 'error');
-                this.useMockData();
+                this.useMockData(); // Fallback
+                this.hideLoading(); // Still hide loading screen
             }
         } catch (error) {
             console.error('❌ Error creating user account:', error);
-            this.useMockData();
+            this.useMockData(); // Fallback
+            this.hideLoading(); // Still hide loading screen
         }
     }
 
