@@ -73,11 +73,29 @@ class SpudVerse {
             return;
         }
 
+        // Ensure we have a valid user ID
+        if (!this.user?.id) {
+            console.error('Cannot level up: No user ID available');
+            return;
+        }
+
         try {
-            // Call backend to securely level up the user
-            const response = await this.apiCall('/api/user/level-up', 'POST');
+            // Call backend to securely level up the user with necessary data
+            const response = await this.apiCall('/api/user/level-up', 'POST', {
+                userId: this.user.id,
+                currentLevel: this.gameData.level,
+                totalFarmed: this.gameData.totalFarmed
+            });
 
             if (response && response.success) {
+                // Log level up details
+                console.log('🎉 Level up successful:', {
+                    oldLevel: this.gameData.level,
+                    newLevel: response.data.level,
+                    oldPerTap: this.gameData.perTap,
+                    newPerTap: response.data.per_tap
+                });
+
                 // Update game data with the new values from the server
                 this.gameData.level = response.data.level;
                 this.gameData.perTap = response.data.per_tap;
@@ -1932,7 +1950,8 @@ class SpudVerse {
         if (this.pendingTaps <= 0) return;
         
         const tapCount = this.pendingTaps; // Actual number of taps
-        const spudAmount = tapCount * Math.floor(this.gameData.perTap * this.gameData.combo); // Calculate SPUD earned
+        const tapAmount = Math.floor(this.gameData.perTap * this.gameData.combo); // SPUD per tap
+        const spudAmount = tapCount * tapAmount; // Total SPUD earned
         this.pendingTaps = 0;
         this.lastSyncTime = Date.now();
         
@@ -1941,12 +1960,13 @@ class SpudVerse {
             this.syncTimeout = null;
         }
         
-        console.log(`🔄 Syncing ${spudAmount} SPUD Points to backend...`);
+        console.log(`🔄 Syncing taps to backend - Taps: ${tapCount}, SPUD per tap: ${tapAmount}, Total SPUD: ${spudAmount}`);
         
         try {
             const response = await this.apiCall('/api/tap', 'POST', { 
-                tapCount: tapCount,  // Number of actual taps for energy consumption
-                spudAmount: spudAmount // Amount of SPUD points earned
+                tapCount,  // Number of actual taps for energy consumption
+                tapAmount, // SPUD earned per tap
+                spudAmount // Total SPUD points earned
             });
             if (response && response.success) {
                 console.log('✅ Sync successful, server response:', response.data);
