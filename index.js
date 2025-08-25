@@ -353,56 +353,54 @@ app.post('/api/tap', async (req, res) => {
         }
 
         const { tapCount, spudAmount } = req.body;
-        console.log('⚡ Tap count:', tapCount);
-        console.log('💰 SPUD amount:', spudAmount);
         
-        // Get current energy before consumption
-        const currentEnergyData = await db.getUserEnergy(userId);
-        console.log('🔋 Current energy before tap:', currentEnergyData);
+        // Validate input
+        const maxTapsPerRequest = 100;
+        if (tapCount > maxTapsPerRequest) {
+            return res.status(400).json({
+                success: false,
+                error: 'Too many taps in one request'
+            });
+        }
+
+        console.log('🎯 Processing tap:', { userId, tapCount, spudAmount });
         
-        // Consume 1 energy per tap, regardless of SPUD amount
-        const energyResult = await db.consumeEnergy(userId, tapCount);
-        console.log('🔋 Energy consumption result:', energyResult);
+        // Process tap with atomic transaction
+        const result = await db.processTap(userId, tapCount, spudAmount);
         
-        if (!energyResult.success) {
-            console.log('❌ Tap rejected - Insufficient energy:', energyResult.error);
-            return res.status(400).json({ 
-                success: false, 
-                error: energyResult.error,
-                energyData: energyResult
+        if (!result.success) {
+            console.log('❌ Tap rejected:', result.error);
+            return res.status(400).json({
+                success: false,
+                error: result.error,
+                energyData: {
+                    current_energy: result.current_energy,
+                    max_energy: result.max_energy
+                }
             });
         }
         
-        // Get energy after consumption
-        const newEnergyData = await db.getUserEnergy(userId);
-        console.log('🔋 Energy after consumption:', newEnergyData);
-        
-        // Process the tap
-        console.log('💰 Updating user balance by:', spudAmount);
-        await db.updateUserBalance(userId, spudAmount);
-        await db.updateLastTapTime(userId, Date.now());
+        // Log success
+        console.log('✅ Tap processed:', result);
 
-        // Get updated user stats and check for achievements
-        const userStats = await db.getUserStats(userId);
-        const newAchievements = await db.checkAndUnlockAchievements(userId, userStats);
-        
-        // Auto-complete balance-based missions
-        await checkBalanceMissions(userId, userStats.balance);
+        // Process achievements and missions in background
+        Promise.all([
+            db.checkAndUnlockAchievements(userId, { balance: result.balance }),
+            checkBalanceMissions(userId, result.balance)
+        ]).catch(error => {
+            console.error('Background processing error:', error);
+        });
 
         const responseData = {
-            balance: userStats.balance,
-            total_farmed: userStats.total_farmed,
-            earned: spudAmount, // Use spudAmount from request instead of undefined tapAmount
-            energy: energyResult.current_energy,
-            maxEnergy: energyResult.max_energy,
-            timeToFull: energyResult.time_to_full,
-            newAchievements: newAchievements.map(ua => ({
-                id: ua.achievements.id,
-                title: ua.achievements.title,
-                description: ua.achievements.description,
-                icon: ua.achievements.icon,
-                reward: ua.achievements.reward
-            }))
+            balance: result.balance,
+            earned: result.earned,
+            energy: result.current_energy,
+            maxEnergy: result.max_energy,
+            timeToFull: await db.calculateTimeToFull({
+                current_energy: result.current_energy,
+                max_energy: result.max_energy,
+                energy_regen_rate: result.energy_regen_rate
+            })
         };
         
         console.log('✅ Tap success - Response data:', responseData);
