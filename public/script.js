@@ -1372,8 +1372,9 @@ class SpudVerse {
 
             if (response && response.success) {
                 // Update balance and SPH from server response
-                this.gameData.balance = response.data.balance;
-                this.gameData.sph = response.data.sph;
+                // Handle potential inconsistencies in response keys
+                this.gameData.balance = response.data.balance ?? response.data.newBalance ?? this.gameData.balance;
+                this.gameData.sph = response.data.sph ?? response.data.newSPH ?? this.gameData.sph;
 
                 // --- Client-side item state management ---
                 // Ensure gameData.items is a valid array
@@ -2095,6 +2096,9 @@ class SpudVerse {
     }
 
     formatNumber(num) {
+        if (typeof num !== 'number' || isNaN(num)) {
+            return '0';
+        }
         if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
         if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
         if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
