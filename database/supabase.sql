@@ -867,45 +867,67 @@ DECLARE
     v_current_energy integer;
     v_max_energy integer;
     v_current_balance integer;
+    v_energy_regen_rate integer;
+    v_new_energy integer;
+    v_last_energy_update bigint;
+    v_current_time bigint;
+    v_time_diff bigint;
+    v_energy_gained integer;
     v_result json;
 BEGIN
-    -- Lock the user's energy record for update
-    SELECT current_energy, max_energy 
-    INTO v_current_energy, v_max_energy
-    FROM user_energy 
+    -- Lock the user's record for update
+    SELECT energy, max_energy, energy_regen_rate, last_energy_update
+    INTO v_current_energy, v_max_energy, v_energy_regen_rate, v_last_energy_update
+    FROM users 
     WHERE user_id = p_user_id
     FOR UPDATE;
+
+    IF NOT FOUND THEN
+        -- Create new user if not exists
+        INSERT INTO users (user_id, username, first_name, last_name)
+        VALUES (p_user_id, 'User' || p_user_id, 'Unknown', 'User')
+        RETURNING energy, max_energy, energy_regen_rate, last_energy_update 
+        INTO v_current_energy, v_max_energy, v_energy_regen_rate, v_last_energy_update;
+    END IF;
+
+    -- Calculate energy regeneration
+    v_current_time := EXTRACT(EPOCH FROM NOW()) * 1000;
+    v_time_diff := v_current_time - v_last_energy_update;
+    v_energy_gained := FLOOR(v_time_diff / 10000) * v_energy_regen_rate;
+    v_current_energy := LEAST(v_current_energy + v_energy_gained, v_max_energy);
 
     -- Check if we have enough energy
     IF v_current_energy < p_tap_count THEN
         RETURN json_build_object(
             'success', false,
-            'error', 'Insufficient energy',
+            'error', 'insufficient_energy',
             'current_energy', v_current_energy,
-            'max_energy', v_max_energy
+            'max_energy', v_max_energy,
+            'time_to_full', (v_max_energy - v_current_energy) * 10000 / v_energy_regen_rate
         );
     END IF;
 
-    -- Update energy in a single atomic operation
-    UPDATE user_energy 
-    SET current_energy = current_energy - p_tap_count,
-        last_update = NOW()
-    WHERE user_id = p_user_id;
+    -- Calculate new energy after tap
+    v_new_energy := v_current_energy - p_tap_count;
 
-    -- Update balance in a single atomic operation
-    UPDATE users
-    SET balance = balance + p_spud_amount,
-        total_farmed = total_farmed + p_spud_amount
+    -- Update energy and balance in a single atomic operation
+    UPDATE users 
+    SET energy = v_new_energy,
+        balance = balance + p_spud_amount,
+        total_farmed = total_farmed + p_spud_amount,
+        last_energy_update = v_current_time,
+        updated_at = NOW()
     WHERE user_id = p_user_id
     RETURNING balance INTO v_current_balance;
 
     -- Build success response
     RETURN json_build_object(
         'success', true,
-        'current_energy', v_current_energy - p_tap_count,
+        'current_energy', v_new_energy,
         'max_energy', v_max_energy,
         'balance', v_current_balance,
-        'earned', p_spud_amount
+        'earned', p_spud_amount,
+        'time_to_full', (v_max_energy - v_new_energy) * 10000 / v_energy_regen_rate
     );
 END;
 $$;

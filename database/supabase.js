@@ -913,6 +913,25 @@ class SupabaseDatabase {
         }
     }
 
+    // Calculate time to full energy
+    async calculateTimeToFull({ current_energy, max_energy, energy_regen_rate }) {
+        try {
+            if (current_energy >= max_energy) {
+                return 0; // Already full
+            }
+            
+            const energyNeeded = max_energy - current_energy;
+            const regenRate = energy_regen_rate || 1; // Default to 1 energy per minute
+            const timeInMinutes = energyNeeded / regenRate;
+            const timeInSeconds = Math.ceil(timeInMinutes * 60);
+            
+            return timeInSeconds;
+        } catch (error) {
+            console.error('calculateTimeToFull error:', error);
+            return 0;
+        }
+    }
+
     close() {
         // Supabase client doesn't need explicit closing
         console.log('📡 Supabase connection closed');
