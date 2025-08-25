@@ -2233,7 +2233,13 @@ class SpudVerse {
             const baseUrl = window.location.origin;
             let url = baseUrl + endpoint;
             
-            console.log(`🌐 API Call: ${method} ${url}`);
+            console.log(`[DEBUG] Making API call:`, {
+                method,
+                url,
+                data,
+                tg: !!this.tg,
+                user: this.user
+            });
             
             const options = {
                 method,
@@ -2250,7 +2256,7 @@ class SpudVerse {
                 const initData = this.tg.initData || '';
                 options.headers['Authorization'] = `tma ${initData}`;
                 
-                console.log('🔐 Auth Debug:', {
+                console.log('[DEBUG] Auth info:', {
                     hasTelegram: !!this.tg,
                     hasInitData: !!this.tg.initData,
                     initDataLength: initData.length,
@@ -2259,7 +2265,7 @@ class SpudVerse {
                     referrerId: this.referrerId
                 });
             } else {
-                console.log('🔧 Development mode - no Telegram WebApp');
+                console.log('[DEBUG] Development mode - no Telegram WebApp');
                 
                 // Fallback for development - add referral data as query params
                 if (method === 'GET' && this.referrerId) {
@@ -2282,17 +2288,59 @@ class SpudVerse {
                 options.body = JSON.stringify(data);
             }
 
+            console.log('[DEBUG] Making fetch request:', {
+                url,
+                options: {
+                    ...options,
+                    headers: { ...options.headers }
+                }
+            });
+
             const response = await fetch(url, options);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            console.log('[DEBUG] Received response:', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries())
+            });
+
+            // Đọc response text trước để debug
+            const responseText = await response.text();
+            console.log('[DEBUG] Response text:', responseText);
+
+            // Xử lý case 404 cho endpoint /api/user
+            if (response.status === 404 && endpoint === '/api/user') {
+                console.log('[DEBUG] New user detected (404), showing welcome modal...');
+                await this.showWelcomeModal();
+                return null;
             }
-            
-            const result = await response.json();
-            console.log(`✅ API Response:`, result);
-            return result;
+
+            if (!response.ok) {
+                console.error('[DEBUG] Response not OK:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: responseText
+                });
+                throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
+            }
+
+            // Parse JSON sau khi đã log text
+            try {
+                const jsonResponse = JSON.parse(responseText);
+                console.log('[DEBUG] Parsed JSON response:', jsonResponse);
+                return jsonResponse;
+            } catch (e) {
+                console.error('[DEBUG] Failed to parse JSON:', {
+                    error: e,
+                    responseText
+                });
+                throw new Error(`Invalid JSON response: ${responseText}`);
+            }
         } catch (error) {
-            console.error(`❌ API Error for ${endpoint}:`, error.message);
+            console.error('[DEBUG] API call error:', {
+                endpoint,
+                error: error.message,
+                stack: error.stack
+            });
             // Return mock success for development
             if (endpoint === '/api/user') {
                 return {
