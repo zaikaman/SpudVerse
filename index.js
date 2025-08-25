@@ -427,7 +427,7 @@ app.post('/api/user/level-up', async (req, res) => {
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
-        const result = await db.levelUpUser(userId);
+        const result = await db.levelUpUser(userId, user.level + 1);
 
         if (result.success) {
             console.log(`✅ User ${userId} leveled up successfully. Data:`, result.data);

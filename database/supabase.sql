@@ -536,7 +536,11 @@ BEGIN
         UPDATE users
         SET 
             level = p_new_level,
-            per_tap = level_info.perTapBonus,
+            per_tap = users.per_tap + (level_info.perTapBonus - (
+                SELECT l.perTapBonus 
+                FROM unnest(levels) l 
+                WHERE l.level = p_new_level - 1
+            )), -- Add the difference in bonus
             max_energy = level_info.maxEnergyBonus,
             energy = level_info.maxEnergyBonus, -- Refill energy
             updated_at = NOW()
@@ -546,7 +550,11 @@ BEGIN
             'success', true,
             'data', json_build_object(
                 'level', p_new_level,
-                'per_tap', level_info.perTapBonus,
+                'per_tap', user_record.per_tap + (level_info.perTapBonus - (
+                    SELECT l.perTapBonus 
+                    FROM unnest(levels) l 
+                    WHERE l.level = p_new_level - 1
+                )),
                 'max_energy', level_info.maxEnergyBonus,
                 'energy', level_info.maxEnergyBonus
             )
