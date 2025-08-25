@@ -2020,6 +2020,9 @@ class SpudVerse {
     closeModal() {
         document.querySelectorAll('.modal').forEach(modal => {
             modal.style.display = 'none';
+            if (modal.id === 'achievements-list-modal') {
+                modal.classList.remove('achievements-modal');
+            }
         });
     }
 

@@ -1510,3 +1510,82 @@ body {
     background-color: #eeeeee;
     color: #757575;
 }
+
+/* Custom Achievements Modal Styles */
+.achievements-modal .modal-content {
+    background: #f3f4f6; /* A light grey background */
+    border-radius: 24px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.achievements-modal .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-bottom: none;
+}
+
+.achievements-modal .modal-header h3 {
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.achievements-modal .modal-close {
+    color: white;
+    opacity: 0.8;
+    font-size: 2rem;
+}
+
+.achievements-modal .modal-body {
+    background: transparent;
+    padding: 10px 20px 20px;
+    text-align: left;
+}
+
+#achievements-list-container {
+    max-height: 55vh;
+}
+
+.achievements-modal .achievement-list-item {
+    background: white;
+    border-radius: 16px;
+    margin-bottom: 10px;
+    padding: 15px;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.achievements-modal .achievement-list-item .achievement-title {
+    color: #667eea;
+    font-family: var(--font-title);
+}
+
+.achievements-modal .achievement-list-item.locked .achievement-title {
+    color: #a0aec0;
+}
+
+.achievements-modal .achievement-list-item .achievement-desc {
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.achievements-modal .achievement-list-item .achievement-reward {
+    color: var(--success-color);
+    font-weight: 700;
+}
+
+.achievements-modal .achievement-status span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+}
+
+.achievements-modal .achievement-list-item.unlocked .achievement-status span {
+    color: #38a169;
+    background-color: #c6f6d5;
+}
