@@ -216,38 +216,6 @@ function parseReferralCode(startParam) {
     return isNaN(referrerId) ? null : referrerId;
 }
 
-// Parse user info from Telegram Mini App auth data
-function getUserInfoFromRequest(req) {
-    try {
-        // Check for auth header
-        const initData = req.headers['x-telegram-init-data'];
-        if (!initData) {
-            console.log('❌ No Telegram init data found in headers');
-            return null;
-        }
-
-        // Parse the URL-encoded init data
-        const searchParams = new URLSearchParams(initData);
-        const dataString = searchParams.get('user') || '{}';
-        const user = JSON.parse(dataString);
-
-        if (!user.id) {
-            console.log('❌ No user ID found in init data');
-            return null;
-        }
-
-        return {
-            userId: user.id,
-            username: user.username,
-            firstName: user.first_name,
-            lastName: user.last_name
-        };
-    } catch (error) {
-        console.error('Error parsing user info:', error);
-        return null;
-    }
-}
-
 module.exports = {
     EMOJIS,
     formatNumber,
@@ -263,6 +231,5 @@ module.exports = {
     getProfileMessage,
     getAirdropsMessage,
     generateReferralLink,
-    parseReferralCode,
-    getUserInfoFromRequest
+    parseReferralCode
 };
