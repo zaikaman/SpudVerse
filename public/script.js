@@ -5,20 +5,20 @@ class SpudVerse {
         this.tg = window.Telegram?.WebApp;
         this.user = null;
         this.gameData = {
-            balance: 0,
-            energy: 100,
-            maxEnergy: 100,
-            energyRegenRate: 1,
+            balance: null,
+            energy: null,
+            maxEnergy: null,
+            energyRegenRate: null,
             timeToFull: 0,
-            perTap: 1,
-            streak: 0,
+            perTap: null,
+            streak: null,
             combo: 1,
-            level: 1,
-            totalFarmed: 0,
-            referrals: 0,
+            level: null,
+            totalFarmed: null,
+            referrals: null,
             missions: [],
             achievements: [],
-            sph: 0,
+            sph: null,
             items: []
         };
         this.currentTab = 'farm';
@@ -581,18 +581,32 @@ class SpudVerse {
     }
 
     updateBalance() {
-        document.getElementById('balance').textContent = this.formatNumber(this.gameData.balance);
+        const balanceEl = document.getElementById('balance');
+        if (this.gameData.balance === null) {
+            balanceEl.textContent = '...';
+        } else {
+            balanceEl.textContent = this.formatNumber(this.gameData.balance);
+        }
     }
 
     updateFarmStats() {
-        document.getElementById('per-tap').textContent = this.gameData.perTap;
+        document.getElementById('per-tap').textContent = this.gameData.perTap === null ? '...' : this.gameData.perTap;
         document.getElementById('combo').textContent = this.gameData.combo.toFixed(1);
-        document.getElementById('streak').textContent = this.gameData.streak;
-        document.getElementById('sph').textContent = this.formatNumber(this.gameData.sph);
+        document.getElementById('streak').textContent = this.gameData.streak === null ? '...' : this.gameData.streak;
+        
+        const sphEl = document.getElementById('sph');
+        if (this.gameData.sph === null) {
+            sphEl.textContent = '...';
+        } else {
+            sphEl.textContent = this.formatNumber(this.gameData.sph);
+        }
     }
 
     updateEnergyBar() {
-        const percentage = (this.gameData.energy / this.gameData.maxEnergy) * 100;
+        const energy = this.gameData.energy;
+        const maxEnergy = this.gameData.maxEnergy;
+        const percentage = (energy === null || maxEnergy === null || maxEnergy === 0) ? 100 : (energy / maxEnergy) * 100;
+        
         const energyFill = document.getElementById('energy-fill');
         const energyText = document.getElementById('energy');
         
@@ -610,12 +624,15 @@ class SpudVerse {
         }
         
         if (energyText) {
-            energyText.textContent = `${this.gameData.energy}/${this.gameData.maxEnergy}`;
-            
-            // Add regeneration timer if energy is not full
-            if (this.gameData.energy < this.gameData.maxEnergy && this.gameData.timeToFull > 0) {
-                const timeText = this.formatTime(this.gameData.timeToFull);
-                energyText.textContent += ` (${timeText})`;
+            if (energy === null || maxEnergy === null) {
+                energyText.textContent = `.../...`;
+            } else {
+                energyText.textContent = `${energy}/${maxEnergy}`;
+                // Add regeneration timer if energy is not full
+                if (energy < maxEnergy && this.gameData.timeToFull > 0) {
+                    const timeText = this.formatTime(this.gameData.timeToFull);
+                    energyText.textContent += ` (${timeText})`;
+                }
             }
         }
     }
@@ -711,14 +728,19 @@ class SpudVerse {
     }
 
     updateUI() {
-        const levelInfo = this.getCurrentLevelInfo();
-
         // Update header
         if (this.user) {
             document.getElementById('username').textContent = 
                 this.user.first_name + (this.user.last_name ? ' ' + this.user.last_name : '');
         }
-        document.querySelector('.level').innerHTML = `Level ${levelInfo.level} ${levelInfo.title}`;
+
+        const levelEl = document.querySelector('.level');
+        if (this.gameData.level === null) {
+            levelEl.innerHTML = 'Loading...';
+        } else {
+            const levelInfo = this.getCurrentLevelInfo();
+            levelEl.innerHTML = `Level ${levelInfo.level} ${levelInfo.title}`;
+        }
 
         // Update all stats
         this.updateBalance();
