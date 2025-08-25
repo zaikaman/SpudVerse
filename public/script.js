@@ -126,35 +126,14 @@ class SpudVerse {
         try {
             console.log('🥔 Initializing SpudVerse...');
             
+            // Show loading screen immediately
+            this.showLoading();
+
             // Initialize Telegram WebApp
             this.initTelegram();
 
-            // Add a check to ensure Telegram data is ready before proceeding
-            if (this.tg && !this.tg.initData) {
-                console.log('⏳ Waiting for Telegram initData to be available...');
-                await new Promise((resolve) => {
-                    let attempts = 0;
-                    const maxAttempts = 50; // 5 seconds timeout
-                    const interval = setInterval(() => {
-                        if (this.tg.initData) {
-                            clearInterval(interval);
-                            console.log('✅ Telegram initData is now available.');
-                            // Re-initialize user info now that we have data
-                            this.user = this.tg.initDataUnsafe?.user;
-                            this.referrerId = this.tg.initDataUnsafe?.start_param || null;
-                            resolve();
-                        } else if (attempts >= maxAttempts) {
-                            clearInterval(interval);
-                            console.warn('⚠️ Timed out waiting for Telegram initData.');
-                            resolve(); // Resolve anyway to not block the app
-                        }
-                        attempts++;
-                    }, 100); // Check every 100ms
-                });
-            }
-            
-            // Show loading screen
-            await this.showLoading();
+            // Wait for Telegram initData to be available
+            await this.waitForTelegramData();
             
             // Load user data
             await this.loadUserData();
@@ -209,6 +188,33 @@ class SpudVerse {
         }
     }
 
+    async waitForTelegramData() {
+        if (!this.tg) {
+            console.log('🔧 Not in Telegram environment, skipping wait.');
+            return;
+        }
+
+        if (this.tg.initData) {
+            console.log('✅ Telegram initData is already available.');
+            this.user = this.tg.initDataUnsafe?.user;
+            this.referrerId = this.tg.initDataUnsafe?.start_param || null;
+            return;
+        }
+
+        console.log('⏳ Waiting for Telegram initData to be available...');
+        return new Promise((resolve) => {
+            const interval = setInterval(() => {
+                if (this.tg.initData) {
+                    clearInterval(interval);
+                    console.log('✅ Telegram initData is now available.');
+                    this.user = this.tg.initDataUnsafe?.user;
+                    this.referrerId = this.tg.initDataUnsafe?.start_param || null;
+                    resolve();
+                }
+            }, 100); // Check every 100ms
+        });
+    }
+
     initTelegram() {
         if (this.tg) {
             this.tg.ready();
@@ -255,37 +261,35 @@ class SpudVerse {
         }
     }
 
-    async showLoading() {
-        return new Promise(resolve => {
-            // Add some fun loading text variations
-            const loadingTexts = [
-                'Planting potatoes...',
-                'Watering the farm...',
-                'Summoning potato spirits...',
-                'Calculating SPUD magic...',
-                'Loading memes...',
-                'Preparing epic rewards...'
-            ];
-            
-            let index = 0;
-            const interval = setInterval(() => {
-                const subtitle = document.querySelector('.loading-subtitle');
-                if (subtitle) {
-                    subtitle.textContent = loadingTexts[index] + ' 🌱';
-                }
-                index = (index + 1) % loadingTexts.length;
-            }, 500);
-            
-            // Reduced loading time to 2 seconds
-            setTimeout(() => {
-                clearInterval(interval);
-                console.log('⏰ Loading completed');
-                resolve();
-            }, 2000);
-        });
+    showLoading() {
+        const loading = document.getElementById('loading');
+        const game = document.getElementById('game');
+        loading.style.display = 'flex';
+        game.style.display = 'none';
+
+        const loadingTexts = [
+            'Planting potatoes...',
+            'Watering the farm...',
+            'Summoning potato spirits...',
+            'Calculating SPUD magic...',
+            'Loading memes...',
+            'Preparing epic rewards...'
+        ];
+        
+        let index = 0;
+        this.loadingInterval = setInterval(() => {
+            const subtitle = document.querySelector('.loading-subtitle');
+            if (subtitle) {
+                subtitle.textContent = loadingTexts[index] + ' 🌱';
+            }
+            index = (index + 1) % loadingTexts.length;
+        }, 500);
     }
 
     hideLoading() {
+        if (this.loadingInterval) {
+            clearInterval(this.loadingInterval);
+        }
         const loading = document.getElementById('loading');
         const game = document.getElementById('game');
         
