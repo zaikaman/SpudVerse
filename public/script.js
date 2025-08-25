@@ -481,13 +481,20 @@ class SpudVerse {
             this.gameData.combo = 1;
         }
 
-        // Calculate earned SPUD
+        // Always consume 1 energy per tap, regardless of SPUD earned
+        if (this.gameData.energy < 1) {
+            this.showToast('⚡ No energy left! Wait for regeneration.', 'warning');
+            return;
+        }
+        
+        // Reduce 1 energy per tap
+        this.gameData.energy = Math.max(0, this.gameData.energy - 1);
+
+        // Calculate earned SPUD (this doesn't affect energy consumption)
         const earnedSpud = Math.floor(this.gameData.perTap * this.gameData.combo);
         this.gameData.balance += earnedSpud;
         this.gameData.totalFarmed += earnedSpud;
         
-        // Reduce energy immediately for responsive UI
-        this.gameData.energy = Math.max(0, this.gameData.energy - 1);
         this.tapCount++;
         this.lastTapTime = currentTime;
 
