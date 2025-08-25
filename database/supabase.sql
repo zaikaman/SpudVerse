@@ -1017,9 +1017,9 @@ ALTER FUNCTION public.get_user_energy(p_user_id bigint) OWNER TO postgres;
 -- Name: get_user_stats(bigint); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.get_user_stats(p_user_id bigint) RETURNS TABLE(balance bigint, total_farmed bigint, referral_count bigint, completed_missions bigint, rank integer, level integer)
+CREATE FUNCTION public.get_user_stats(p_user_id bigint) RETURNS TABLE(balance bigint, total_farmed bigint, referral_count bigint, completed_missions bigint, rank integer)
     LANGUAGE plpgsql
-    AS $
+    AS $$
 BEGIN
     RETURN QUERY
     SELECT 
@@ -1027,8 +1027,7 @@ BEGIN
         u.total_farmed,
         COALESCE(r.referral_count, 0) as referral_count,
         COALESCE(m.completed_missions, 0) as completed_missions,
-        COALESCE(l.rank::INTEGER, 0) as rank,
-        u.level
+        COALESCE(l.rank::INTEGER, 0) as rank
     FROM users u
     LEFT JOIN (
         SELECT referrer_id, COUNT(*) as referral_count 
@@ -1044,7 +1043,7 @@ BEGIN
     LEFT JOIN leaderboard l ON u.user_id = l.user_id
     WHERE u.user_id = p_user_id;
 END;
-$;
+$$;
 
 
 ALTER FUNCTION public.get_user_stats(p_user_id bigint) OWNER TO postgres;

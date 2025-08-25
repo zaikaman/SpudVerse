@@ -519,9 +519,6 @@ class SupabaseDatabase {
                     case 'balance':
                         shouldUnlock = userStats.balance >= achievement.threshold;
                         break;
-                    case 'level':
-                        shouldUnlock = userStats.level >= achievement.threshold;
-                        break;
                     case 'referrals':
                         shouldUnlock = userStats.referral_count >= achievement.threshold;
                         break;
@@ -540,11 +537,6 @@ class SupabaseDatabase {
                     const unlocked = await this.unlockAchievement(userId, achievement.id);
                     if (unlocked) {
                         newlyUnlocked.push(unlocked);
-                        // Award the achievement reward to the user
-                        if (unlocked.achievements && unlocked.achievements.reward > 0) {
-                            console.log(`🏆 Awarding ${unlocked.achievements.reward} SPUD for achievement: ${unlocked.achievements.title}`);
-                            await this.updateUserBalance(userId, unlocked.achievements.reward);
-                        }
                     }
                 }
             }
