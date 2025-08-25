@@ -519,6 +519,9 @@ class SupabaseDatabase {
                     case 'balance':
                         shouldUnlock = userStats.balance >= achievement.threshold;
                         break;
+                    case 'level':
+                        shouldUnlock = userStats.level >= achievement.threshold;
+                        break;
                     case 'referrals':
                         shouldUnlock = userStats.referral_count >= achievement.threshold;
                         break;
