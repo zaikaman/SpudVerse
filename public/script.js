@@ -347,6 +347,7 @@ class SpudVerse {
                     this.gameData.totalFarmed = response.data.totalFarmed ?? 0;
                     this.gameData.sph = response.data.sph ?? 0;
                     this.gameData.items = response.data.items ?? [];
+                    this.gameData.referrals = response.data.referrals ?? 0;
                     this.gameData.streak = response.data.streak ?? 0;
                     this.gameData.bestStreak = response.data.bestStreak ?? 0;
                     this.lastEnergyUpdate = Date.now();
@@ -1768,7 +1769,7 @@ class SpudVerse {
         document.querySelector('.profile-title').innerHTML = `${levelInfo.title}`;
         
         document.getElementById('profile-balance').textContent = this.formatNumber(this.gameData.balance);
-        document.getElementById('profile-referrals').textContent = this.gameData.referrals;
+        document.getElementById('profile-referrals').textContent = this.gameData.referrals || 0;
         document.getElementById('profile-sph').textContent = this.formatNumber(this.gameData.sph);
         document.getElementById('profile-missions').textContent = 
             this.gameData.missions.filter(m => m.claimed).length;
