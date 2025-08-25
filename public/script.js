@@ -69,18 +69,38 @@ class SpudVerse {
 
     async checkForLevelUp() {
         const nextLevel = this.getNextLevelInfo();
+        
+        // Thêm logging cho việc check level up
+        console.log('[DEBUG] Checking level up:', {
+            currentLevel: this.gameData.level,
+            nextLevel,
+            totalFarmed: this.gameData.totalFarmed,
+            requiredFarmed: nextLevel?.requiredFarmed
+        });
+        
         if (!nextLevel || this.gameData.totalFarmed < nextLevel.requiredFarmed) {
+            console.log('[DEBUG] Level up conditions not met', {
+                hasNextLevel: !!nextLevel,
+                currentFarmed: this.gameData.totalFarmed,
+                required: nextLevel?.requiredFarmed
+            });
             return;
         }
 
         // Ensure we have a valid user ID
         if (!this.user?.id) {
-            console.error('Cannot level up: No user ID available');
+            console.error('[DEBUG] Cannot level up: No user ID available');
             return;
         }
 
         try {
             // Call backend to securely level up the user with necessary data
+            console.log('[DEBUG] Attempting level up API call:', {
+                userId: this.user.id,
+                currentLevel: this.gameData.level,
+                totalFarmed: this.gameData.totalFarmed
+            });
+            
             const response = await this.apiCall('/api/user/level-up', 'POST', {
                 userId: this.user.id,
                 currentLevel: this.gameData.level,
@@ -493,6 +513,19 @@ class SpudVerse {
     }
 
     async handlePotatoTap(event) {
+        // Kiểm tra tính hợp lệ của energy và maxEnergy
+        console.log('[DEBUG] Current energy state:', {
+            energy: this.gameData.energy,
+            maxEnergy: this.gameData.maxEnergy
+        });
+        
+        if (!this.gameData.maxEnergy || this.gameData.maxEnergy <= 0) {
+            console.error('[DEBUG] Invalid maxEnergy:', this.gameData.maxEnergy);
+            this.gameData.maxEnergy = 100; // Reset về giá trị mặc định
+            this.gameData.energy = 100;
+            await this.syncEnergyWithBackend(); // Đồng bộ với server
+        }
+
         if (this.gameData.energy <= 0) {
             this.showToast('⚡ No energy left! Wait for regeneration.', 'warning');
             this.shakeElement(document.getElementById('mega-potato'));
@@ -513,6 +546,12 @@ class SpudVerse {
         if (this.gameData.energy < 1) {
             this.showToast('⚡ No energy left! Wait for regeneration.', 'warning');
             return;
+        }
+        
+        // Ensure perTap is valid
+        if (!this.gameData.perTap || this.gameData.perTap <= 0) {
+            console.error('[DEBUG] Invalid perTap value:', this.gameData.perTap);
+            this.gameData.perTap = 1; // Reset về giá trị mặc định
         }
         
         // Reduce 1 energy per tap
@@ -1962,9 +2001,37 @@ class SpudVerse {
     async syncTapsToBackend() {
         if (this.pendingTaps <= 0) return;
         
+        // Kiểm tra và log tất cả các giá trị liên quan
+        console.log('[DEBUG] Current game state before sync:', {
+            pendingTaps: this.pendingTaps,
+            perTap: this.gameData.perTap,
+            combo: this.gameData.combo,
+            energy: this.gameData.energy,
+            maxEnergy: this.gameData.maxEnergy
+        });
+        
+        // Đảm bảo các giá trị hợp lệ
+        if (!this.gameData.perTap || this.gameData.perTap <= 0) {
+            console.warn('[DEBUG] Invalid perTap value, resetting to 1');
+            this.gameData.perTap = 1;
+        }
+        
+        if (!this.gameData.combo || this.gameData.combo < 1) {
+            console.warn('[DEBUG] Invalid combo value, resetting to 1');
+            this.gameData.combo = 1;
+        }
+        
         const tapCount = this.pendingTaps; // Actual number of taps
         const tapAmount = Math.floor(this.gameData.perTap * this.gameData.combo); // SPUD per tap
         const spudAmount = tapCount * tapAmount; // Total SPUD earned
+        
+        console.log('[DEBUG] Calculated tap values:', {
+            tapCount,
+            tapAmount,
+            spudAmount,
+            formula: `${tapCount} * (${this.gameData.perTap} * ${this.gameData.combo})`
+        });
+        
         this.pendingTaps = 0;
         this.lastSyncTime = Date.now();
         
@@ -1972,8 +2039,6 @@ class SpudVerse {
             clearTimeout(this.syncTimeout);
             this.syncTimeout = null;
         }
-        
-        console.log(`🔄 Syncing taps to backend - Taps: ${tapCount}, SPUD per tap: ${tapAmount}, Total SPUD: ${spudAmount}`);
         
         try {
             const response = await this.apiCall('/api/tap', 'POST', { 
