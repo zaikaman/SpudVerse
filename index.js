@@ -333,7 +333,7 @@ app.get('/api/user', async (req, res) => {
                 referrals: referralCount,
                 streak: user?.streak || 0,
                 bestStreak: user?.best_streak || 0,
-                items: userItems.map(item => ({ id: item.item_id, count: item.quantity }))
+                items: userItems.map(item => ({ id: item.item_id, count: item.count }))
             }
         });
     } catch (error) {
