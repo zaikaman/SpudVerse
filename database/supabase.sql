@@ -1265,33 +1265,13 @@ BEGIN
             user_id, 
             username, 
             first_name, 
-            last_name,
-            balance,
-            total_farmed,
-            level,
-            per_tap,
-            energy,
-            max_energy,
-            energy_regen_rate,
-            last_energy_update,
-            sph,
-            last_sph_update
+            last_name
         )
         VALUES (
             p_user_id, 
             'User' || p_user_id, 
             'Unknown', 
-            'User',
-            0, -- balance
-            0, -- total_farmed 
-            1, -- level
-            1, -- per_tap
-            100, -- energy
-            100, -- max_energy 
-            1, -- energy_regen_rate
-            EXTRACT(EPOCH FROM NOW()) * 1000, -- last_energy_update
-            0, -- sph
-            NOW() -- last_sph_update
+            'User'
         )
         RETURNING * INTO user_record;
     END IF;

@@ -91,24 +91,42 @@ app.post('/api/tap', async (req, res) => {
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
-        const { amount } = req.body;
-        const tapAmount = amount || 1;
-        await db.updateUserBalance(userId, tapAmount);
-        await db.updateTotalFarmed(userId, tapAmount);
-        await db.updateLastTapTime(userId, Date.now());
+        // Kiểm tra và log request body
+        console.info('[info] Tap request - User ID:', userId);
+        console.info('[info] Tap request body:', req.body);
 
-        const user = await db.getUser(userId);
-        res.json({
-            success: true,
-            data: {
-                newBalance: user?.balance || 0,
-                totalFarmed: user?.total_farmed || 0,
-                earned: tapAmount
-            }
-        });
+        const { tapCount, spudAmount } = req.body;
+        if (!tapCount || !spudAmount) {
+            return res.status(400).json({ success: false, error: 'Missing tapCount or spudAmount' });
+        }
+
+        // Xử lý tap thông qua process_tap function
+        const result = await db.process_tap(userId, tapCount, spudAmount);
+        console.info('[info] Process tap result:', result);
+
+        if (result && result.success) {
+            res.json({
+                success: true,
+                data: {
+                    current_energy: result.current_energy,
+                    max_energy: result.max_energy,
+                    balance: result.balance,
+                    earned: result.earned,
+                    energy: result.current_energy,
+                    maxEnergy: result.max_energy,
+                    timeToFull: result.time_to_full
+                }
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error || 'Process tap failed',
+                debug: result
+            });
+        }
     } catch (error) {
-        console.error('Tap API Error:', error);
-        res.status(500).json({ success: false, error: 'Internal server error' });
+        console.error('Process tap error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
