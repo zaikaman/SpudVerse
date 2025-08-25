@@ -1395,6 +1395,7 @@ class SpudVerse {
                             const ownedItem = userItems.find(i => i.id === item.id);
                             const count = ownedItem ? ownedItem.count : 0;
                             const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
+                            const currentProfit = Math.floor(item.profit * Math.pow(item.scaling, count));
                             const canAfford = this.gameData.balance >= currentCost;
 
                             const itemCard = document.createElement('div');
@@ -1403,7 +1404,7 @@ class SpudVerse {
                                 <div class="item-icon">${item.icon}</div>
                                 <div class="item-info">
                                     <div class="item-name">${item.name}</div>
-                                    <div class="item-profit">+${this.formatNumber(item.profit)} SPH</div>
+                                    <div class="item-profit">+${this.formatNumber(currentProfit)} SPH</div>
                                 </div>
                                 <div class="item-action">
                                     <div class="item-count">Owned: ${count}</div>

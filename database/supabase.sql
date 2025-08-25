@@ -718,13 +718,14 @@ CREATE POLICY "Allow all operations on user_items" ON user_items FOR ALL USING (
 
 -- Function to buy a shop item
 CREATE OR REPLACE FUNCTION buy_shop_item(p_user_id BIGINT, p_item_id INTEGER)
-RETURNS JSON AS $$
+RETURNS JSON AS $
 DECLARE
     user_record RECORD;
     item_record RECORD;
     user_item_record RECORD;
     current_count INTEGER;
     cost BIGINT;
+    profit_increase BIGINT;
 BEGIN
     -- Get records
     SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
@@ -738,6 +739,7 @@ BEGIN
     -- Determine current count and cost
     current_count := COALESCE(user_item_record.count, 0);
     cost := FLOOR(item_record.cost * POWER(item_record.scaling, current_count));
+    profit_increase := FLOOR(item_record.profit * POWER(item_record.scaling, current_count));
 
     -- Check balance
     IF user_record.balance < cost THEN
@@ -748,7 +750,7 @@ BEGIN
     UPDATE users 
     SET 
         balance = balance - cost,
-        sph = sph + item_record.profit
+        sph = sph + profit_increase
     WHERE user_id = p_user_id;
 
     IF user_item_record IS NULL THEN
@@ -771,7 +773,7 @@ BEGIN
         'new_count', user_item_record.count
     );
 END;
-$$ LANGUAGE plpgsql;
+$ LANGUAGE plpgsql;
 
 -- Function to get user data including items
 CREATE OR REPLACE FUNCTION get_user_data(p_user_id BIGINT)
