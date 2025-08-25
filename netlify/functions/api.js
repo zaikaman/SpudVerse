@@ -300,6 +300,7 @@ app.post('/api/shop/buy', async (req, res) => {
         }
 
         const result = await db.buyShopItem(userId, itemId);
+        console.log('[/api/shop/buy] result:', result);
         
         if (result.success) {
             res.json(result);

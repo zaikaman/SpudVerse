@@ -1472,9 +1472,11 @@ class SpudVerse {
             const response = await this.apiCall('/api/shop/buy', 'POST', { itemId });
 
             if (response && response.success) {
+                console.log('[buyShopItem] response:', response);
                 // Update balance and SPH from server response
                 this.gameData.balance = response.new_balance ?? this.gameData.balance;
                 this.gameData.sph = response.new_sph ?? this.gameData.sph;
+                console.log('[buyShopItem] new sph:', this.gameData.sph);
 
                 // --- Client-side item state management ---
                 // Ensure gameData.items is a valid array
