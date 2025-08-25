@@ -153,6 +153,9 @@ class SpudVerse {
             // Start SPH interval
             this.startSPHInterval();
 
+            // Update the UI with all loaded data before showing the game
+            this.updateUI();
+
             // Hide loading and show game
             this.hideLoading();
             
@@ -310,15 +313,11 @@ class SpudVerse {
                 this.useMockData();
             }
         } catch (error) {
-            console.error('❌ API call to /api/user failed:', error);
-            this.showToast('Could not connect to the server. Using offline mode.', 'error');
-            this.useMockData();
-        }
-        
-        this.updateUI();
+        console.error('❌ API call to /api/user failed:', error);
+        this.showToast('Could not connect to the server. Using offline mode.', 'error');
+        this.useMockData();
     }
-
-    async loadUserAchievements() {
+}    async loadUserAchievements() {
         try {
             console.log('🏆 Loading user achievements...');
             
