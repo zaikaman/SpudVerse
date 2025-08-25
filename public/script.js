@@ -1465,6 +1465,7 @@ class SpudVerse {
             : null;
         const count = ownedItem ? ownedItem.count : 0;
         const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
+        const currentProfit = Math.floor(item.profit * Math.pow(item.scaling, count));
 
         if (this.gameData.balance < currentCost) {
             this.showToast("You don't have enough SPUD Points!", "error");
@@ -1475,25 +1476,26 @@ class SpudVerse {
             const response = await this.apiCall('/api/shop/buy', 'POST', { itemId });
 
             if (response && response.success) {
-                // Update balance and SPH from server response
-                this.gameData.balance = response.new_balance ?? this.gameData.balance;
-                this.gameData.sph = response.new_sph ?? this.gameData.sph;
+                // For immediate UI feedback, calculate changes locally.
+                // Prioritize server response if available, otherwise use local calculation.
+                this.gameData.balance = response.new_balance ?? (this.gameData.balance - currentCost);
+                this.gameData.sph = response.new_sph ?? (this.gameData.sph + currentProfit);
+                
                 // Ensure gameData.items is a valid array
                 if (!Array.isArray(this.gameData.items)) {
                     this.gameData.items = [];
                 }
 
-                // Find the item in the local state
-                const ownedItem = this.gameData.items.find(i => i.id === itemId);
+                // Find the item in the local state and update its count
+                const ownedItemInState = this.gameData.items.find(i => i.id === itemId);
 
-                if (ownedItem) {
+                if (ownedItemInState) {
                     // If item exists, increment its count
-                    ownedItem.count++;
+                    ownedItemInState.count++;
                 } else {
                     // If item doesn't exist, add it to the array
                     this.gameData.items.push({ id: itemId, count: 1 });
                 }
-                // --- End of client-side management ---
 
                 this.updateUI();
                 this.loadShopItems();
