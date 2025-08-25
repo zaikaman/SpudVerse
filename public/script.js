@@ -125,71 +125,71 @@ class SpudVerse {
     async init() {
         try {
             console.log('🥔 Initializing SpudVerse...');
-            
-            // Show loading screen immediately
             this.showLoading();
 
-            // Initialize Telegram WebApp and wait for data
             this.initTelegram();
             await this.waitForTelegramData();
             
-            // Load user data and check if user is new
-            const isExistingUser = await this.loadUserData();
+            const userStatus = await this.loadUserData();
             
-            // If new user, show welcome modal and stop init flow.
-            // The rest of the initialization will be handled by createUserAccount.
-            if (!isExistingUser) {
-                await this.showWelcomeModal();
-                return; // Stop here
+            switch (userStatus) {
+                case 'exists':
+                    // --- Continue for existing users ---
+                    console.log('✅ User exists. Proceeding with initialization.');
+                    await this.loadUserAchievements();
+                    this.setupEventListeners();
+                    this.startEnergyRegen();
+                    this.startSPHInterval();
+                    this.updateUI();
+                    this.hideLoading();
+                    this.setupGlobalErrorHandlers();
+                    console.log('🚀 SpudVerse ready for existing user!');
+                    break;
+
+                case 'new':
+                    // --- Handle new users ---
+                    console.log('🆕 New user detected. Showing welcome modal.');
+                    await this.showWelcomeModal();
+                    // Initialization stops here; createUserAccount will take over
+                    break;
+
+                case 'error':
+                    // --- Handle critical errors ---
+                    console.error('🛑 Critical error during user load. Halting initialization.');
+                    // The loading screen is already visible, so we just update its content.
+                    const loading = document.getElementById('loading');
+                    if (loading) {
+                        loading.innerHTML = `
+                            <div class="potato-loader">
+                                <div class="potato-bounce">😵</div>
+                                <div class="loading-text">Oops! Something went wrong</div>
+                                <div class="loading-subtitle">Could not load your profile. Please try again later.</div>
+                                <button onclick="window.location.reload()" style="
+                                    margin-top: 20px;
+                                    padding: 10px 20px;
+                                    background: #ff6b35;
+                                    color: white;
+                                    border: none;
+                                    border-radius: 10px;
+                                    cursor: pointer;
+                                    font-family: 'Comic Neue', cursive;
+                                    font-weight: 600;
+                                ">🔄 Reload Game</button>
+                            </div>
+                        `;
+                    }
+                    break;
             }
             
-            // --- Continue for existing users ---
-            
-            // Load user achievements 
-            await this.loadUserAchievements();
-            
-            // Setup event listeners
-            this.setupEventListeners();
-            
-            // Start energy regeneration
-            this.startEnergyRegen();
-            
-            // Start SPH interval
-            this.startSPHInterval();
-
-            // Update the UI with all loaded data
-            this.updateUI();
-
-            // Hide loading and show game
-            this.hideLoading();
-            
-            // Set up global error handlers for debugging
-            this.setupGlobalErrorHandlers();
-            
-            console.log('🚀 SpudVerse ready for existing user!');
-            
         } catch (error) {
-            console.error('💥 SpudVerse initialization failed:', error);
-            
-            // Show error to user
+            console.error('💥 SpudVerse initialization failed catastrophically:', error);
             const loading = document.getElementById('loading');
             if (loading) {
                 loading.innerHTML = `
                     <div class="potato-loader">
                         <div class="potato-bounce">😵</div>
-                        <div class="loading-text">Oops! Something went wrong</div>
-                        <div class="loading-subtitle">Please refresh the page 🔄</div>
-                        <button onclick="window.location.reload()" style="
-                            margin-top: 20px;
-                            padding: 10px 20px;
-                            background: #ff6b35;
-                            color: white;
-                            border: none;
-                            border-radius: 10px;
-                            cursor: pointer;
-                            font-family: 'Comic Neue', cursive;
-                            font-weight: 600;
-                        ">🔄 Reload Game</button>
+                        <div class="loading-text">A critical error occurred</div>
+                        <div class="loading-subtitle">Please restart the application.</div>
                     </div>
                 `;
             }
@@ -313,17 +313,16 @@ class SpudVerse {
         console.log('🔄 Loading user data...');
         try {
             const response = await this.apiCall('/api/user', 'GET');
-            
-            // New user detected
-            if (response?.status === 404 || response?.statusCode === 404 || response?.error?.toLowerCase?.()?.includes('not found')) {
-                console.log('🆕 New user detected, returning false.');
-                return false; // Signal that user is new
+
+            // Case 1: New user detected
+            if (response === null || response?.status === 404 || response?.statusCode === 404 || response?.error?.toLowerCase?.()?.includes('not found')) {
+                console.log('🆕 New user detected, returning \'new\'');
+                return 'new';
             }
-            
+
+            // Case 2: Successful data load for existing user
             if (response && response.success) {
                 console.log('✅ User data loaded successfully:', response.data);
-                
-                // Map server data to gameData structure
                 this.gameData.balance = response.data.balance ?? 0;
                 this.gameData.energy = response.data.energy ?? 100;
                 this.gameData.maxEnergy = response.data.maxEnergy ?? 100;
@@ -335,21 +334,23 @@ class SpudVerse {
                 this.gameData.items = response.data.items ?? [];
                 this.gameData.streak = response.data.streak ?? 0;
                 this.gameData.bestStreak = response.data.bestStreak ?? 0;
-
                 this.lastEnergyUpdate = Date.now();
-                return true; // Signal that user exists
-            } else {
-                console.warn('⚠️ Could not load user data, using mock data.', response?.error);
-                this.useMockData();
-                return true; // Assume existing user with mock data
+                return 'exists';
             }
+            
+            // Case 3: API call failed for other reasons
+            console.error('❌ API call to /api/user failed with an unexpected response:', response);
+            this.showToast('Could not load your profile. Please try again later.', 'error');
+            return 'error';
+
         } catch (error) {
-            console.error('❌ API call to /api/user failed:', error);
-            this.showToast('Could not connect to the server. Using offline mode.', 'error');
-            this.useMockData();
-            return true; // Assume existing user with mock data
+            console.error('❌ API call to /api/user threw an exception:', error);
+            this.showToast('Could not connect to the server. Please check your connection.', 'error');
+            return 'error';
         }
-    }    async loadUserAchievements() {
+    }
+
+    async loadUserAchievements() {
         try {
             console.log('🏆 Loading user achievements...');
             
