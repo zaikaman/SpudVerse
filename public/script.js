@@ -1925,7 +1925,7 @@ class SpudVerse {
             this.syncTimeout = null;
         }
         
-        console.log(`🔄 Syncing ${amount} SPUD Points to backend...`);
+        console.log(`🔄 Syncing ${spudAmount} SPUD Points to backend...`);
         
         try {
             const response = await this.apiCall('/api/tap', 'POST', { 
@@ -1978,7 +1978,7 @@ class SpudVerse {
                 this.updateFarmStats();
             } else {
                 console.warn('⚠️ Sync failed, adding back to pending');
-                this.pendingTaps += amount; // Add back if failed
+                this.pendingTaps += tapCount; // Add back if failed
             }
         } catch (error) {
             // Handle energy errors specifically
@@ -1990,7 +1990,7 @@ class SpudVerse {
             }
             
             console.error('❌ Sync error:', error);
-            this.pendingTaps += amount; // Add back if failed
+            this.pendingTaps += tapCount; // Add back if failed
         }
     }
 
