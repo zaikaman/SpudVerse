@@ -110,6 +110,30 @@ class SpudVerse {
             
             // Initialize Telegram WebApp
             this.initTelegram();
+
+            // Add a check to ensure Telegram data is ready before proceeding
+            if (this.tg && !this.tg.initData) {
+                console.log('⏳ Waiting for Telegram initData to be available...');
+                await new Promise((resolve) => {
+                    let attempts = 0;
+                    const maxAttempts = 50; // 5 seconds timeout
+                    const interval = setInterval(() => {
+                        if (this.tg.initData) {
+                            clearInterval(interval);
+                            console.log('✅ Telegram initData is now available.');
+                            // Re-initialize user info now that we have data
+                            this.user = this.tg.initDataUnsafe?.user;
+                            this.referrerId = this.tg.initDataUnsafe?.start_param || null;
+                            resolve();
+                        } else if (attempts >= maxAttempts) {
+                            clearInterval(interval);
+                            console.warn('⚠️ Timed out waiting for Telegram initData.');
+                            resolve(); // Resolve anyway to not block the app
+                        }
+                        attempts++;
+                    }, 100); // Check every 100ms
+                });
+            }
             
             // Show loading screen
             await this.showLoading();
