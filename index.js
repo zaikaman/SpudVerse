@@ -19,7 +19,8 @@ const {
     generateReferralLink,
     parseReferralCode,
     formatNumber,
-    EMOJIS
+    EMOJIS,
+    getUserInfoFromRequest
 } = require('./utils/helpers');
 
 // Initialize Express app, bot and database
@@ -121,9 +122,12 @@ bot.use(async (ctx, next) => {
 app.post('/api/user/create', async (req, res) => {
     try {
         console.log('🆕 User creation request received');
+        console.log('📝 Request headers:', req.headers);
         
         // Get user info from Telegram auth
         const userInfo = getUserInfoFromRequest(req);
+        console.log('👤 User info from request:', userInfo);
+        
         if (!userInfo || !userInfo.userId) {
             console.log('❌ User creation failed - no auth:', userInfo?.error || 'No user info');
             return res.status(401).json({
