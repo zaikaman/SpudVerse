@@ -1830,6 +1830,8 @@ app.post('/api/shop/buy', async (req, res) => {
             data: {
                 item: item,
                 newBalance: updatedUser.balance,
+                newSPH: result.new_sph,
+                newCount: result.new_count,
                 energy: energyData.current_energy,
                 maxEnergy: energyData.max_energy,
                 message: `Successfully purchased ${item.name}!`
