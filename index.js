@@ -352,16 +352,16 @@ app.post('/api/tap', async (req, res) => {
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
-        const { amount } = req.body;
-        const tapAmount = amount || 1;
-        console.log('⚡ Tap amount:', tapAmount);
+        const { tapCount, spudAmount } = req.body;
+        console.log('⚡ Tap count:', tapCount);
+        console.log('💰 SPUD amount:', spudAmount);
         
         // Get current energy before consumption
         const currentEnergyData = await db.getUserEnergy(userId);
         console.log('🔋 Current energy before tap:', currentEnergyData);
         
-        // Check energy before processing tap
-        const energyResult = await db.consumeEnergy(userId, tapAmount);
+        // Consume 1 energy per tap, regardless of SPUD amount
+        const energyResult = await db.consumeEnergy(userId, tapCount);
         console.log('🔋 Energy consumption result:', energyResult);
         
         if (!energyResult.success) {
@@ -378,8 +378,8 @@ app.post('/api/tap', async (req, res) => {
         console.log('🔋 Energy after consumption:', newEnergyData);
         
         // Process the tap
-        console.log('💰 Updating user balance by:', tapAmount);
-        await db.updateUserBalance(userId, tapAmount);
+        console.log('💰 Updating user balance by:', spudAmount);
+        await db.updateUserBalance(userId, spudAmount);
         await db.updateLastTapTime(userId, Date.now());
 
         // Get updated user stats and check for achievements

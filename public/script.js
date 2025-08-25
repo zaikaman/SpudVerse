@@ -521,7 +521,8 @@ class SpudVerse {
         this.saveProgress();
 
         // Add to pending taps for batch processing
-        this.pendingTaps += earnedSpud;
+        // Track actual tap count for energy consumption
+        this.pendingTaps += 1; // Only count 1 tap regardless of SPUD earned
         this.scheduleTapSync();
     }
 
@@ -1914,7 +1915,8 @@ class SpudVerse {
     async syncTapsToBackend() {
         if (this.pendingTaps <= 0) return;
         
-        const amount = this.pendingTaps;
+        const tapCount = this.pendingTaps; // Actual number of taps
+        const spudAmount = tapCount * Math.floor(this.gameData.perTap * this.gameData.combo); // Calculate SPUD earned
         this.pendingTaps = 0;
         this.lastSyncTime = Date.now();
         
@@ -1926,7 +1928,10 @@ class SpudVerse {
         console.log(`🔄 Syncing ${amount} SPUD Points to backend...`);
         
         try {
-            const response = await this.apiCall('/api/tap', 'POST', { amount: amount });
+            const response = await this.apiCall('/api/tap', 'POST', { 
+                tapCount: tapCount,  // Number of actual taps for energy consumption
+                spudAmount: spudAmount // Amount of SPUD points earned
+            });
             if (response && response.success) {
                 console.log('✅ Sync successful, server response:', response.data);
                 
