@@ -23,48 +23,6 @@ class SupabaseDatabase {
     }
 
     // User methods
-    async process_tap(userId, tapCount, spudAmount) {
-        if (!this.client) {
-            return { success: false, error: 'No database connection' };
-        }
-        
-        try {
-            console.log(`[DEBUG] process_tap - User ID: ${userId}, Tap Count: ${tapCount}, SPUD Amount: ${spudAmount}`);
-            
-            // Convert to Unix timestamp (milliseconds)
-            const currentTimestamp = Date.now();
-            
-            const { data, error } = await this.client
-                .from('users')
-                .update({
-                    balance: spudAmount,
-                    total_farmed: spudAmount,
-                    last_tap_time: currentTimestamp
-                })
-                .eq('user_id', userId)
-                .select()
-                .single();
-
-            if (error) {
-                console.error('Process tap error:', error);
-                return { success: false, error: error.message };
-            }
-
-            return {
-                success: true,
-                balance: data.balance,
-                total_farmed: data.total_farmed,
-                earned: spudAmount,
-                current_energy: data.current_energy,
-                max_energy: data.max_energy,
-                time_to_full: 0
-            };
-        } catch (error) {
-            console.error('Process tap error:', error);
-            return { success: false, error: error.message };
-        }
-    }
-
     async getUser(userId) {
         if (!this.client) return null;
         
@@ -927,25 +885,6 @@ class SupabaseDatabase {
         } catch (error) {
             console.error('syncBalance error:', error);
             return { success: false, error: error.message };
-        }
-    }
-
-    // Calculate time to full energy
-    async calculateTimeToFull({ current_energy, max_energy, energy_regen_rate }) {
-        try {
-            if (current_energy >= max_energy) {
-                return 0; // Already full
-            }
-            
-            const energyNeeded = max_energy - current_energy;
-            const regenRate = energy_regen_rate || 1; // Default to 1 energy per minute
-            const timeInMinutes = energyNeeded / regenRate;
-            const timeInSeconds = Math.ceil(timeInMinutes * 60);
-            
-            return timeInSeconds;
-        } catch (error) {
-            console.error('calculateTimeToFull error:', error);
-            return 0;
         }
     }
 

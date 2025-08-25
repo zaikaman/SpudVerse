@@ -353,54 +353,56 @@ app.post('/api/tap', async (req, res) => {
         }
 
         const { tapCount, spudAmount } = req.body;
+        console.log('⚡ Tap count:', tapCount);
+        console.log('💰 SPUD amount:', spudAmount);
         
-        // Validate input
-        const maxTapsPerRequest = 100;
-        if (tapCount > maxTapsPerRequest) {
-            return res.status(400).json({
-                success: false,
-                error: 'Too many taps in one request'
-            });
-        }
-
-        console.log('🎯 Processing tap:', { userId, tapCount, spudAmount });
+        // Get current energy before consumption
+        const currentEnergyData = await db.getUserEnergy(userId);
+        console.log('🔋 Current energy before tap:', currentEnergyData);
         
-        // Process tap with atomic transaction
-        const result = await db.process_tap(userId, tapCount, spudAmount);
+        // Consume 1 energy per tap, regardless of SPUD amount
+        const energyResult = await db.consumeEnergy(userId, tapCount);
+        console.log('🔋 Energy consumption result:', energyResult);
         
-        if (!result.success) {
-            console.log('❌ Tap rejected:', result.error);
-            return res.status(400).json({
-                success: false,
-                error: result.error,
-                energyData: {
-                    current_energy: result.current_energy,
-                    max_energy: result.max_energy
-                }
+        if (!energyResult.success) {
+            console.log('❌ Tap rejected - Insufficient energy:', energyResult.error);
+            return res.status(400).json({ 
+                success: false, 
+                error: energyResult.error,
+                energyData: energyResult
             });
         }
         
-        // Log success
-        console.log('✅ Tap processed:', result);
+        // Get energy after consumption
+        const newEnergyData = await db.getUserEnergy(userId);
+        console.log('🔋 Energy after consumption:', newEnergyData);
+        
+        // Process the tap
+        console.log('💰 Updating user balance by:', spudAmount);
+        await db.updateUserBalance(userId, spudAmount);
+        await db.updateLastTapTime(userId, Date.now());
 
-        // Process achievements and missions in background
-        Promise.all([
-            db.checkAndUnlockAchievements(userId, { balance: result.balance }),
-            checkBalanceMissions(userId, result.balance)
-        ]).catch(error => {
-            console.error('Background processing error:', error);
-        });
+        // Get updated user stats and check for achievements
+        const userStats = await db.getUserStats(userId);
+        const newAchievements = await db.checkAndUnlockAchievements(userId, userStats);
+        
+        // Auto-complete balance-based missions
+        await checkBalanceMissions(userId, userStats.balance);
 
         const responseData = {
-            balance: result.balance,
-            earned: result.earned,
-            energy: result.current_energy,
-            maxEnergy: result.max_energy,
-            timeToFull: await db.calculateTimeToFull({
-                current_energy: result.current_energy,
-                max_energy: result.max_energy,
-                energy_regen_rate: result.energy_regen_rate
-            })
+            balance: userStats.balance,
+            total_farmed: userStats.total_farmed,
+            earned: tapAmount,
+            energy: energyResult.current_energy,
+            maxEnergy: energyResult.max_energy,
+            timeToFull: energyResult.time_to_full,
+            newAchievements: newAchievements.map(ua => ({
+                id: ua.achievements.id,
+                title: ua.achievements.title,
+                description: ua.achievements.description,
+                icon: ua.achievements.icon,
+                reward: ua.achievements.reward
+            }))
         };
         
         console.log('✅ Tap success - Response data:', responseData);
@@ -425,20 +427,7 @@ app.post('/api/user/level-up', async (req, res) => {
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
-        // Get current user data first
-        const currentUser = await db.getUser(userId);
-        if (!currentUser) {
-            console.log('❌ Level up failed: User not found');
-            return res.status(404).json({ success: false, error: 'User not found' });
-        }
-
-        console.log('👤 Current user data:', {
-            userId: currentUser.user_id,
-            currentLevel: currentUser.level,
-            totalFarmed: currentUser.total_farmed
-        });
-
-        const result = await db.levelUpUser(userId, currentUser.level + 1);
+        const result = await db.levelUpUser(userId, user.level + 1);
 
         if (result.success) {
             console.log(`✅ User ${userId} leveled up successfully. Data:`, result.data);

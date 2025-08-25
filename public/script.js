@@ -69,53 +69,15 @@ class SpudVerse {
 
     async checkForLevelUp() {
         const nextLevel = this.getNextLevelInfo();
-        
-        // Thêm logging cho việc check level up
-        console.log('[DEBUG] Checking level up:', {
-            currentLevel: this.gameData.level,
-            nextLevel,
-            totalFarmed: this.gameData.totalFarmed,
-            requiredFarmed: nextLevel?.requiredFarmed
-        });
-        
         if (!nextLevel || this.gameData.totalFarmed < nextLevel.requiredFarmed) {
-            console.log('[DEBUG] Level up conditions not met', {
-                hasNextLevel: !!nextLevel,
-                currentFarmed: this.gameData.totalFarmed,
-                required: nextLevel?.requiredFarmed
-            });
-            return;
-        }
-
-        // Ensure we have a valid user ID
-        if (!this.user?.id) {
-            console.error('[DEBUG] Cannot level up: No user ID available');
             return;
         }
 
         try {
-            // Call backend to securely level up the user with necessary data
-            console.log('[DEBUG] Attempting level up API call:', {
-                userId: this.user.id,
-                currentLevel: this.gameData.level,
-                totalFarmed: this.gameData.totalFarmed
-            });
-            
-            const response = await this.apiCall('/api/user/level-up', 'POST', {
-                userId: this.user.id,
-                currentLevel: this.gameData.level,
-                totalFarmed: this.gameData.totalFarmed
-            });
+            // Call backend to securely level up the user
+            const response = await this.apiCall('/api/user/level-up', 'POST');
 
             if (response && response.success) {
-                // Log level up details
-                console.log('🎉 Level up successful:', {
-                    oldLevel: this.gameData.level,
-                    newLevel: response.data.level,
-                    oldPerTap: this.gameData.perTap,
-                    newPerTap: response.data.per_tap
-                });
-
                 // Update game data with the new values from the server
                 this.gameData.level = response.data.level;
                 this.gameData.perTap = response.data.per_tap;
@@ -321,16 +283,7 @@ class SpudVerse {
         console.log('🔄 Loading user data from Supabase...');
         
         try {
-            console.log('📤 Making API call to /api/user...');
             const response = await this.apiCall('/api/user', 'GET');
-            console.log('📥 API Response:', response);
-            
-            // Add specific 404 check
-            if (response?.status === 404 || response?.statusCode === 404) {
-                console.log('🆕 New user detected (404 response), showing welcome modal');
-                await this.showWelcomeModal();
-                return;
-            }
             
             if (response && response.success) {
                 console.log('✅ Supabase data loaded successfully:', response.data);
@@ -353,9 +306,8 @@ class SpudVerse {
 
                 this.lastEnergyUpdate = Date.now();
             } else {
-                // Additional check for user not found in error message
-                if (response?.error?.toLowerCase?.()?.includes('not found')) {
-                    console.log('🆕 New user detected (error message), showing welcome modal');
+                if (response && (response.error === 'User not found' || response.status === 404)) {
+                    console.log('🆕 New user detected, showing welcome modal');
                     await this.showWelcomeModal();
                     return;
                 }
@@ -513,19 +465,6 @@ class SpudVerse {
     }
 
     async handlePotatoTap(event) {
-        // Kiểm tra tính hợp lệ của energy và maxEnergy
-        console.log('[DEBUG] Current energy state:', {
-            energy: this.gameData.energy,
-            maxEnergy: this.gameData.maxEnergy
-        });
-        
-        if (!this.gameData.maxEnergy || this.gameData.maxEnergy <= 0) {
-            console.error('[DEBUG] Invalid maxEnergy:', this.gameData.maxEnergy);
-            this.gameData.maxEnergy = 100; // Reset về giá trị mặc định
-            this.gameData.energy = 100;
-            await this.syncEnergyWithBackend(); // Đồng bộ với server
-        }
-
         if (this.gameData.energy <= 0) {
             this.showToast('⚡ No energy left! Wait for regeneration.', 'warning');
             this.shakeElement(document.getElementById('mega-potato'));
@@ -546,12 +485,6 @@ class SpudVerse {
         if (this.gameData.energy < 1) {
             this.showToast('⚡ No energy left! Wait for regeneration.', 'warning');
             return;
-        }
-        
-        // Ensure perTap is valid
-        if (!this.gameData.perTap || this.gameData.perTap <= 0) {
-            console.error('[DEBUG] Invalid perTap value:', this.gameData.perTap);
-            this.gameData.perTap = 1; // Reset về giá trị mặc định
         }
         
         // Reduce 1 energy per tap
@@ -581,15 +514,16 @@ class SpudVerse {
         // Haptic feedback
         this.vibrate();
 
+        // Check for level up
+        this.checkForLevelUp();
+
         // Save progress
         this.saveProgress();
 
-        // Add tap to batch and sync with backend
+        // Add to pending taps for batch processing
+        // Track actual tap count for energy consumption
         this.pendingTaps += 1; // Only count 1 tap regardless of SPUD earned
-        await this.scheduleTapSync(); // Wait for sync to complete
-
-        // Let backend handle level up - we'll get updated stats in the sync response
-        await this.loadUserData(); // Reload user data to get new level if any
+        this.scheduleTapSync();
     }
 
     createTapEffect(event, amount) {
@@ -726,85 +660,69 @@ class SpudVerse {
     }
 
     startEnergyRegen() {
-        // Clear any existing timers first
-        this.stopEnergyRegen();
-        
-        // Start local UI updates (100ms)
+        // Start local real-time countdown (100ms)
         this.startLocalEnergyTimer();
         
         // Start backend sync (10 seconds)
         this.startBackendEnergySync();
-        
-        console.log('🔋 Energy regeneration system started');
     }
 
     startLocalEnergyTimer() {
-        // Only update UI and time to full locally
+        // Update countdown every 100ms for smooth real-time experience
         this.localRegenTimer = setInterval(() => {
             if (this.gameData.energy < this.gameData.maxEnergy) {
+                // Calculate time since last energy update
                 const now = Date.now();
                 const timePassed = now - this.lastEnergyUpdate;
                 
-                // Calculate time to full
+                // Check if we should regenerate energy (every 10 seconds)
+                if (timePassed >= 10000) {
+                    const energyToAdd = Math.floor(timePassed / 10000) * this.gameData.energyRegenRate;
+                    if (energyToAdd > 0) {
+                        this.gameData.energy = Math.min(this.gameData.energy + energyToAdd, this.gameData.maxEnergy);
+                        this.lastEnergyUpdate = now - (timePassed % 10000); // Keep remainder
+                    }
+                }
+                
+                // Update time to full for display
                 if (this.gameData.energy < this.gameData.maxEnergy) {
                     const energyNeeded = this.gameData.maxEnergy - this.gameData.energy;
-                    const timeToNextEnergy = 10000 - (timePassed % 10000);
+                    const timeToNextEnergy = 10000 - (now - this.lastEnergyUpdate);
                     this.gameData.timeToFull = (energyNeeded - 1) * 10000 + timeToNextEnergy;
                 } else {
                     this.gameData.timeToFull = 0;
                 }
                 
-                // Only update UI, let backend handle actual energy regeneration
                 this.updateEnergyBar();
             }
-        }, 100); // Update UI every 100ms for smooth countdown
-        
-        console.log('⚡ Local energy UI updates started');
+        }, 100); // Update every 100ms for smooth countdown
     }
 
     startBackendEnergySync() {
-        if (this.gameData.balance === undefined || this.gameData.balance < 0) {
-            console.log('⏸️ Skipping backend energy sync - user not loaded yet');
-            return;
-        }
-
-        console.log('🔄 Starting backend energy sync for existing user');
-        
-        // Clear any existing sync interval
-        if (this.energyRegenInterval) {
-            clearInterval(this.energyRegenInterval);
-        }
-        
-        // Initial sync
-        this.syncEnergyWithBackend();
-        
-        // Then sync every 10 seconds
-        this.energyRegenInterval = setInterval(() => this.syncEnergyWithBackend(), 10000);
-    }
-    
-    async syncEnergyWithBackend() {
-        try {
-            const response = await this.apiCall('/api/energy', 'GET');
-            if (response && response.success) {
-                // Log energy state before update
-                console.log('🔄 Energy sync:', {
-                    previous: this.gameData.energy,
-                    new: response.data.current_energy,
-                    diff: response.data.current_energy - this.gameData.energy,
-                    timestamp: new Date().toISOString()
-                });
-                
-                // Only update if there's a significant difference
-                if (Math.abs(this.gameData.energy - response.data.current_energy) > 1) {
-                    this.gameData.energy = response.data.current_energy;
-                    this.gameData.maxEnergy = response.data.max_energy;
-                    this.gameData.energyRegenRate = response.data.energy_regen_rate;
-                    this.lastEnergyUpdate = Date.now();
-                    this.updateEnergyBar();
+        // Only start energy sync if user data was successfully loaded
+        // This prevents /api/energy from creating users before welcome modal
+        if (this.gameData.balance !== undefined && this.gameData.balance >= 0) {
+            console.log('🔄 Starting backend energy sync for existing user');
+            
+            // Sync with backend every 10 seconds for accuracy
+            this.energyRegenInterval = setInterval(async () => {
+                try {
+                    const response = await this.apiCall('/api/energy', 'GET');
+                    if (response && response.success) {
+                        // Update game data with server values
+                        this.gameData.energy = response.data.current_energy;
+                        this.gameData.maxEnergy = response.data.max_energy;
+                        this.gameData.energyRegenRate = response.data.energy_regen_rate;
+                        this.lastEnergyUpdate = Date.now(); // Reset local timer
+                        
+                        console.log('🔄 Energy synced with backend:', this.gameData.energy);
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Backend energy sync failed, using local calculation');
                 }
-            }
-        } catch (error) {
-            console.warn('⚠️ Backend energy sync failed:', error);
+            }, 10000); // 10 seconds
+        } else {
+            console.log('⏸️ Skipping backend energy sync - user not loaded yet');
         }
     }
 
@@ -1793,12 +1711,9 @@ class SpudVerse {
     }
 
     async showWelcomeModal() {
-        console.log('📝 Attempting to show welcome modal...');
         return new Promise((resolve) => {
-            console.log('🎨 Creating welcome modal elements...');
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
-            console.log('💅 Setting modal styles...');
             overlay.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -1981,61 +1896,27 @@ class SpudVerse {
         console.log('🏆 Achievement checking moved to backend API');
     }
 
-    async scheduleTapSync() {
+    scheduleTapSync() {
         const now = Date.now();
         
         // If we have pending taps and enough time has passed, sync immediately
         if (this.pendingTaps > 0 && (now - this.lastSyncTime) >= this.syncInterval) {
-            await this.syncTapsToBackend();
-            return;
+            this.syncTapsToBackend();
         }
-        
         // Otherwise, schedule a sync if not already scheduled
-        if (this.pendingTaps > 0 && !this.syncTimeout) {
+        else if (this.pendingTaps > 0 && !this.syncTimeout) {
             const timeToWait = this.syncInterval - (now - this.lastSyncTime);
-            return new Promise((resolve) => {
-                this.syncTimeout = setTimeout(async () => {
-                    await this.syncTapsToBackend();
-                    resolve();
-                }, Math.max(100, timeToWait));
-            });
+            this.syncTimeout = setTimeout(() => {
+                this.syncTapsToBackend();
+            }, Math.max(100, timeToWait));
         }
     }
 
     async syncTapsToBackend() {
         if (this.pendingTaps <= 0) return;
         
-        // Kiểm tra và log tất cả các giá trị liên quan
-        console.log('[DEBUG] Current game state before sync:', {
-            pendingTaps: this.pendingTaps,
-            perTap: this.gameData.perTap,
-            combo: this.gameData.combo,
-            energy: this.gameData.energy,
-            maxEnergy: this.gameData.maxEnergy
-        });
-        
-        // Đảm bảo các giá trị hợp lệ
-        if (!this.gameData.perTap || this.gameData.perTap <= 0) {
-            console.warn('[DEBUG] Invalid perTap value, resetting to 1');
-            this.gameData.perTap = 1;
-        }
-        
-        if (!this.gameData.combo || this.gameData.combo < 1) {
-            console.warn('[DEBUG] Invalid combo value, resetting to 1');
-            this.gameData.combo = 1;
-        }
-        
         const tapCount = this.pendingTaps; // Actual number of taps
-        const tapAmount = Math.floor(this.gameData.perTap * this.gameData.combo); // SPUD per tap
-        const spudAmount = tapCount * tapAmount; // Total SPUD earned
-        
-        console.log('[DEBUG] Calculated tap values:', {
-            tapCount,
-            tapAmount,
-            spudAmount,
-            formula: `${tapCount} * (${this.gameData.perTap} * ${this.gameData.combo})`
-        });
-        
+        const spudAmount = tapCount * Math.floor(this.gameData.perTap * this.gameData.combo); // Calculate SPUD earned
         this.pendingTaps = 0;
         this.lastSyncTime = Date.now();
         
@@ -2044,11 +1925,12 @@ class SpudVerse {
             this.syncTimeout = null;
         }
         
+        console.log(`🔄 Syncing ${spudAmount} SPUD Points to backend...`);
+        
         try {
             const response = await this.apiCall('/api/tap', 'POST', { 
-                tapCount,  // Number of actual taps for energy consumption
-                tapAmount, // SPUD earned per tap
-                spudAmount // Total SPUD points earned
+                tapCount: tapCount,  // Number of actual taps for energy consumption
+                spudAmount: spudAmount // Amount of SPUD points earned
             });
             if (response && response.success) {
                 console.log('✅ Sync successful, server response:', response.data);
@@ -2302,13 +2184,7 @@ class SpudVerse {
             const baseUrl = window.location.origin;
             let url = baseUrl + endpoint;
             
-            console.log(`[DEBUG] Making API call:`, {
-                method,
-                url,
-                data,
-                tg: !!this.tg,
-                user: this.user
-            });
+            console.log(`🌐 API Call: ${method} ${url}`);
             
             const options = {
                 method,
@@ -2325,7 +2201,7 @@ class SpudVerse {
                 const initData = this.tg.initData || '';
                 options.headers['Authorization'] = `tma ${initData}`;
                 
-                console.log('[DEBUG] Auth info:', {
+                console.log('🔐 Auth Debug:', {
                     hasTelegram: !!this.tg,
                     hasInitData: !!this.tg.initData,
                     initDataLength: initData.length,
@@ -2334,7 +2210,7 @@ class SpudVerse {
                     referrerId: this.referrerId
                 });
             } else {
-                console.log('[DEBUG] Development mode - no Telegram WebApp');
+                console.log('🔧 Development mode - no Telegram WebApp');
                 
                 // Fallback for development - add referral data as query params
                 if (method === 'GET' && this.referrerId) {
@@ -2357,59 +2233,17 @@ class SpudVerse {
                 options.body = JSON.stringify(data);
             }
 
-            console.log('[DEBUG] Making fetch request:', {
-                url,
-                options: {
-                    ...options,
-                    headers: { ...options.headers }
-                }
-            });
-
             const response = await fetch(url, options);
-            console.log('[DEBUG] Received response:', {
-                status: response.status,
-                statusText: response.statusText,
-                headers: Object.fromEntries(response.headers.entries())
-            });
-
-            // Đọc response text trước để debug
-            const responseText = await response.text();
-            console.log('[DEBUG] Response text:', responseText);
-
-            // Xử lý case 404 cho endpoint /api/user
-            if (response.status === 404 && endpoint === '/api/user') {
-                console.log('[DEBUG] New user detected (404), showing welcome modal...');
-                await this.showWelcomeModal();
-                return null;
-            }
-
+            
             if (!response.ok) {
-                console.error('[DEBUG] Response not OK:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    body: responseText
-                });
-                throw new Error(`HTTP error! status: ${response.status}, body: ${responseText}`);
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-
-            // Parse JSON sau khi đã log text
-            try {
-                const jsonResponse = JSON.parse(responseText);
-                console.log('[DEBUG] Parsed JSON response:', jsonResponse);
-                return jsonResponse;
-            } catch (e) {
-                console.error('[DEBUG] Failed to parse JSON:', {
-                    error: e,
-                    responseText
-                });
-                throw new Error(`Invalid JSON response: ${responseText}`);
-            }
+            
+            const result = await response.json();
+            console.log(`✅ API Response:`, result);
+            return result;
         } catch (error) {
-            console.error('[DEBUG] API call error:', {
-                endpoint,
-                error: error.message,
-                stack: error.stack
-            });
+            console.error(`❌ API Error for ${endpoint}:`, error.message);
             // Return mock success for development
             if (endpoint === '/api/user') {
                 return {
