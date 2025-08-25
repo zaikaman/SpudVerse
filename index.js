@@ -314,6 +314,11 @@ app.get('/api/user', async (req, res) => {
         // Check balance missions on user load
         await checkBalanceMissions(userId, user?.balance || 0);
         
+        // Set cache headers to prevent stale data on client
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+
         res.json({
             success: true,
             data: {
@@ -1820,7 +1825,7 @@ app.post('/api/shop/buy', async (req, res) => {
     }
 });
 
-app.post('/api/user/sync-balance', async (req, res) => {
+app.get('/api/user/sync-balance', async (req, res) => {
     try {
         console.log('💫 Balance sync request received');
         
