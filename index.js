@@ -267,78 +267,95 @@ app.post('/api/user/create', async (req, res) => {
 });
 
 app.get('/api/user', async (req, res) => {
+    let userId; // Declare userId here to be accessible in the catch block
     try {
-        // Extract user ID and user data from Telegram Mini App data
+        console.log('--- [START] /api/user request ---');
+        
+        // Step 1: Get user info from request
         const userInfo = getUserInfoFromRequest(req);
         if (!userInfo || !userInfo.userId) {
+            console.error('🛑 [ERROR] /api/user - Unauthorized: No valid user info found in request.');
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
-        const { userId, username, firstName, lastName, referrerId } = userInfo;
-        console.log('👤 API User request:', { userId, username, firstName, lastName, referrerId });
+        // Assign userId for use throughout the function
+        userId = userInfo.userId;
+        const { username, firstName, lastName, referrerId } = userInfo;
+        console.log(`[INFO] /api/user - Processing request for userId: ${userId}`, { username, firstName });
 
+        // Step 2: Get initial user data
+        console.log(`[INFO] /api/user - (DB) Fetching initial user data for userId: ${userId}`);
         let user = await db.getUser(userId);
         
-        // NEW APPROACH: Don't auto-create user, return 404 for new users
         if (!user) {
-            console.log('🆕 New user detected, returning 404 to trigger welcome modal:', userId);
+            console.log(`[INFO] /api/user - New user detected (userId: ${userId}). Returning 404 to trigger welcome modal.`);
             return res.status(404).json({ 
                 success: false, 
                 error: 'User not found',
                 isNewUser: true 
             });
         }
+        console.log(`[SUCCESS] /api/user - (DB) Initial user data fetched for userId: ${userId}`, { balance: user.balance, level: user.level });
 
-        // Update streak on user load
+        // Step 3: Update user streak
+        console.log(`[INFO] /api/user - (DB) Updating streak for userId: ${userId}`);
         await db.updateUserStreak(userId);
         user = await db.getUser(userId); // Re-fetch user to get updated streak
+        console.log(`[SUCCESS] /api/user - (DB) Streak updated. Current streak: ${user.streak}`);
 
-        const referralCount = await db.getReferralCount(userId);
-        const energyData = await db.getUserEnergy(userId);
-        const userItems = await db.getUserItems(userId);
-        
-        // Auto-complete welcome mission if not already completed
+        // Step 4: Fetch all required data in parallel
+        console.log(`[INFO] /api/user - (DB) Fetching referral count, energy, and items in parallel for userId: ${userId}`);
+        const [referralCount, energyData, userItems] = await Promise.all([
+            db.getReferralCount(userId),
+            db.getUserEnergy(userId),
+            db.getUserItems(userId)
+        ]);
+        console.log(`[SUCCESS] /api/user - (DB) Parallel data fetched for userId: ${userId}`, { referralCount, energy: energyData.current_energy, itemCount: userItems.length });
+
+        // Step 5: Handle missions (no need to log these in detail unless they fail)
         const welcomeMission = await db.getUserMissionProgress(userId, 1);
         if (!welcomeMission || !welcomeMission.completed) {
-            console.log('🎉 Auto-completing welcome mission for user');
-            await db.updateUserMission(userId, 1, true, false); // Mission ID 1 = Welcome to SpudVerse
+            await db.updateUserMission(userId, 1, true, false);
         }
-        
-        // Auto-complete daily login mission if not already completed
         const dailyLoginMission = await db.getUserMissionProgress(userId, 5);
         if (!dailyLoginMission || !dailyLoginMission.completed) {
-            console.log('📅 Auto-completing daily login mission');
-            await db.updateUserMission(userId, 5, true, false); // Mission ID 5 = Daily Login
+            await db.updateUserMission(userId, 5, true, false);
         }
-        
-        // Check balance missions on user load
         await checkBalanceMissions(userId, user?.balance || 0);
         
-        // Set cache headers to prevent stale data on client
+        // Step 6: Prepare final response data
+        const responseData = {
+            balance: user?.balance || 0,
+            energy: energyData.current_energy,
+            maxEnergy: energyData.max_energy,
+            energyRegenRate: energyData.energy_regen_rate,
+            timeToFull: energyData.time_to_full,
+            level: user?.level || 1,
+            perTap: user?.per_tap || 1,
+            totalFarmed: user?.total_farmed || 0,
+            referrals: referralCount,
+            streak: user?.streak || 0,
+            bestStreak: user?.best_streak || 0,
+            sph: user?.sph || 0,
+            items: userItems.map(item => ({ id: item.item_id, count: item.count }))
+        };
+        console.log(`[INFO] /api/user - Preparing to send final response for userId: ${userId}`, { balance: responseData.balance, energy: responseData.energy, level: responseData.level });
+
+        // Step 7: Send response
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
         res.setHeader('Pragma', 'no-cache');
         res.setHeader('Expires', '0');
-
         res.json({
             success: true,
-            data: {
-                balance: user?.balance || 0,
-                energy: energyData.current_energy,
-                maxEnergy: energyData.max_energy,
-                energyRegenRate: energyData.energy_regen_rate,
-                timeToFull: energyData.time_to_full,
-                level: user?.level || 1,
-                perTap: user?.per_tap || 1,
-                totalFarmed: user?.total_farmed || 0,
-                referrals: referralCount,
-                streak: user?.streak || 0,
-                bestStreak: user?.best_streak || 0,
-                sph: user?.sph || 0,
-                items: userItems.map(item => ({ id: item.item_id, count: item.count }))
-            }
+            data: responseData
         });
+        console.log(`--- [SUCCESS] /api/user request for userId: ${userId} ---`);
+
     } catch (error) {
-        console.error('API Error:', error);
+        console.error(`--- [FATAL ERROR] /api/user request for userId: ${userId || 'UNKNOWN'} ---`);
+        console.error('Error Message:', error.message);
+        console.error('Error Stack:', error.stack);
+        console.error('Full Error Object:', JSON.stringify(error, null, 2));
         res.status(500).json({ success: false, error: 'Internal server error' });
     }
 });
