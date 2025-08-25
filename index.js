@@ -427,7 +427,20 @@ app.post('/api/user/level-up', async (req, res) => {
             return res.status(401).json({ success: false, error: 'Unauthorized' });
         }
 
-        const result = await db.levelUpUser(userId, user.level + 1);
+        // Get current user data first
+        const currentUser = await db.getUser(userId);
+        if (!currentUser) {
+            console.log('❌ Level up failed: User not found');
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        console.log('👤 Current user data:', {
+            userId: currentUser.user_id,
+            currentLevel: currentUser.level,
+            totalFarmed: currentUser.total_farmed
+        });
+
+        const result = await db.levelUpUser(userId, currentUser.level + 1);
 
         if (result.success) {
             console.log(`✅ User ${userId} leveled up successfully. Data:`, result.data);
