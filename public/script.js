@@ -289,17 +289,17 @@ class SpudVerse {
                 console.log('✅ Supabase data loaded successfully:', response.data);
                 
                 // Map Supabase data to gameData structure
-                this.gameData.balance = response.data.balance || 0;
-                this.gameData.energy = response.data.energy || 100;
-                this.gameData.maxEnergy = response.data.max_energy || 100;
-                this.gameData.energyRegenRate = response.data.energy_regen_rate || 1;
-                this.gameData.perTap = response.data.per_tap || 1;
-                this.gameData.level = response.data.level || 1;
-                this.gameData.totalFarmed = response.data.total_farmed || 0;
-                this.gameData.sph = response.data.sph || 0;
-                this.gameData.items = response.data.items || [];
-                this.gameData.streak = response.data.streak || 0;
-                this.gameData.bestStreak = response.data.best_streak || 0;
+                this.gameData.balance = response.data.balance ?? 0;
+                this.gameData.energy = response.data.energy ?? 100;
+                this.gameData.maxEnergy = response.data.maxEnergy ?? 100;
+                this.gameData.energyRegenRate = response.data.energyRegenRate ?? 1;
+                this.gameData.perTap = response.data.perTap ?? 1;
+                this.gameData.level = response.data.level ?? 1;
+                this.gameData.totalFarmed = response.data.totalFarmed ?? 0;
+                this.gameData.sph = response.data.sph ?? 0;
+                this.gameData.items = response.data.items ?? [];
+                this.gameData.streak = response.data.streak ?? 0;
+                this.gameData.bestStreak = response.data.bestStreak ?? 0;
 
                 this.lastEnergyUpdate = Date.now();
             } else {
@@ -1529,13 +1529,21 @@ class SpudVerse {
         try {
             const response = await this.apiCall('/api/upgrades/purchase', 'POST', { upgradeName });
 
-            if (response.success) {
-                this.showToast(`🚀 ${upgradeName.replace('_', ' ')} upgraded!`, 'success');
-                this.gameData.balance = response.new_balance;
-                this.updateBalance();
+            if (response.success && response.data) {
+                this.showToast(response.data.message || `🚀 ${upgradeName.replace('_', ' ')} upgraded!`, 'success');
+                
+                // Update all relevant game data from the complete user object
+                this.gameData.balance = response.data.balance;
+                this.gameData.level = response.data.level;
+                this.gameData.perTap = response.data.perTap;
+                this.gameData.energy = response.data.energy;
+                this.gameData.maxEnergy = response.data.maxEnergy;
+                this.gameData.energyRegenRate = response.data.energyRegenRate;
+                this.gameData.timeToFull = response.data.timeToFull;
+
                 // Reload upgrades to show new levels and costs
                 this.loadUpgrades();
-                // Also update user stats on other tabs
+                // Also update user stats on all tabs
                 this.updateUI();
             } else {
                 this.showToast(response.error || 'Upgrade failed', 'error');

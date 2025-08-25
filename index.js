@@ -324,15 +324,15 @@ app.get('/api/user', async (req, res) => {
             data: {
                 balance: user?.balance || 0,
                 energy: energyData.current_energy,
-                maxEnergy: energyData.max_energy,
-                energyRegenRate: energyData.energy_regen_rate,
-                timeToFull: energyData.time_to_full,
+                max_energy: energyData.max_energy,
+                energy_regen_rate: energyData.energy_regen_rate,
+                time_to_full: energyData.time_to_full,
                 level: user?.level || 1,
-                perTap: user?.per_tap || 1,
-                totalFarmed: user?.total_farmed || 0,
+                per_tap: user?.per_tap || 1,
+                total_farmed: user?.total_farmed || 0,
                 referrals: referralCount,
                 streak: user?.streak || 0,
-                bestStreak: user?.best_streak || 0,
+                best_streak: user?.best_streak || 0,
                 items: userItems.map(item => ({ id: item.item_id, count: item.quantity }))
             }
         });
@@ -1076,7 +1076,23 @@ app.post('/api/upgrades/purchase', async (req, res) => {
         }
         const result = await db.purchaseUpgrade(userId, upgradeName);
         if (result.success) {
-            res.json(result);
+            // After a successful purchase, fetch the complete updated user state
+            const user = await db.getUser(userId);
+            const energyData = await db.getUserEnergy(userId);
+            
+            res.json({
+                success: true,
+                data: {
+                    message: result.message,
+                    balance: user.balance,
+                    level: user.level,
+                    perTap: user.per_tap,
+                    energy: energyData.current_energy,
+                    maxEnergy: energyData.max_energy,
+                    energyRegenRate: energyData.energy_regen_rate,
+                    timeToFull: energyData.time_to_full,
+                }
+            });
         } else {
             res.status(400).json(result);
         }
