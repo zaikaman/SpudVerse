@@ -366,7 +366,7 @@ app.post('/api/tap', async (req, res) => {
         console.log('🎯 Processing tap:', { userId, tapCount, spudAmount });
         
         // Process tap with atomic transaction
-        const result = await db.processTap(userId, tapCount, spudAmount);
+        const result = await db.process_tap(userId, tapCount, spudAmount);
         
         if (!result.success) {
             console.log('❌ Tap rejected:', result.error);
