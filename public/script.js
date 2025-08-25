@@ -1780,24 +1780,32 @@ class SpudVerse {
 
     shareReferralLink() {
         const userId = this.user?.id || 12345;
-        const referralCode = userId.toString();
-        const botLink = `https://t.me/spudverse_bot`;
-        const shareText = `🥔 Join me in SpudVerse! 🌱\n\nTap potatoes, earn SPUD Points, and become a farming legend!\n\n🎁 My referral code: ${referralCode}\n\nHow to join:\n1. Click: ${botLink}\n2. Enter my code: ${referralCode}\n3. Get 50 SPUD Points bonus!\n\nStart farming now! 🚀`;
+        const referralLink = `https://t.me/spudverse_bot?start=${userId}`;
+        const shareText = `🥔 Join me in SpudVerse! 🌱\n\nTap potatoes, earn SPUD Points, and become a farming legend!\n\nStart farming now! 🚀\n${referralLink}`;
 
-        if (this.tg) {
-            // Share with bot link and referral code
-            this.tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(botLink)}&text=${encodeURIComponent(shareText)}`);
-        } else if (navigator.share) {
-            navigator.share({
-                title: 'Join SpudVerse!',
-                text: shareText,
-                url: botLink
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(shareText).then(() => {
+                this.showToast('📋 Referral text copied!', 'success');
+            }).catch(err => {
+                this.showToast('Could not copy text.', 'error');
+                console.error('Clipboard error:', err);
             });
         } else {
-            // Fallback: copy to clipboard
-            navigator.clipboard.writeText(shareText).then(() => {
-                this.showToast('📋 Referral code and bot link copied to clipboard!', 'success');
-            });
+            // Fallback for non-secure contexts or old browsers
+            const textArea = document.createElement("textarea");
+            textArea.value = shareText;
+            textArea.style.position = "fixed"; // Avoid scrolling to bottom
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                this.showToast('📋 Referral text copied!', 'success');
+            } catch (err) {
+                this.showToast('Could not copy text.', 'error');
+                console.error('Fallback copy error:', err);
+            }
+            document.body.removeChild(textArea);
         }
     }
 
