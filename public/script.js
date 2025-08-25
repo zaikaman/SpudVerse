@@ -298,6 +298,9 @@ class SpudVerse {
                 this.gameData.totalFarmed = response.data.totalFarmed ?? 0;
                 this.gameData.sph = response.data.sph ?? 0;
                 this.gameData.items = response.data.items ?? [];
+                
+                // Make sure to update UI with new perTap value
+                this.updateFarmStats();
                 this.gameData.streak = response.data.streak ?? 0;
                 this.gameData.bestStreak = response.data.bestStreak ?? 0;
 
