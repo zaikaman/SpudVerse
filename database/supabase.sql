@@ -1120,12 +1120,14 @@ ALTER FUNCTION public.increment_user_balance(p_user_id bigint, p_amount integer)
 -- Name: level_up_user(bigint, integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.level_up_user(p_user_id bigint, p_new_level integer) RETURNS json
-    LANGUAGE plpgsql
-    AS $
+CREATE OR REPLACE FUNCTION public.level_up_user(p_user_id bigint, p_new_level integer)
+RETURNS json
+LANGUAGE plpgsql
+AS $function$
 DECLARE
     user_record RECORD;
     level_info level_requirements;
+    previous_level_info level_requirements;
     levels level_requirements[] := ARRAY[
         (1, 0, 1, 100, 1),
         (2, 1000, 2, 150, 2),
@@ -1135,56 +1137,54 @@ DECLARE
         (6, 150000, 12, 500, 6),
         (7, 500000, 20, 750, 7)
     ]::level_requirements[];
-    i INTEGER;
+    per_tap_increase INTEGER;
+    max_energy_increase INTEGER;
+    energy_regen_increase INTEGER;
+    updated_user_data JSON;
 BEGIN
     -- Get user data
     SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
 
     -- Find the level info for the new level
-    level_info := NULL;
-    FOREACH level_info IN ARRAY levels LOOP
-        IF level_info.level = p_new_level THEN
-            EXIT;
-        END IF;
-        level_info := NULL;
-    END LOOP;
+    SELECT * INTO level_info FROM unnest(levels) l WHERE l.level = p_new_level;
 
     IF level_info IS NULL THEN
-        RETURN json_build_object(
-            'success', false, 
-            'error', 'Invalid level',
-            'details', json_build_object(
-                'current_level', user_record.level,
-                'attempted_level', p_new_level
-            )
-        );
+        RETURN json_build_object('success', false, 'error', 'Invalid level');
+    END IF;
+
+    -- Find the level info for the previous level
+    SELECT * INTO previous_level_info FROM unnest(levels) l WHERE l.level = user_record.level;
+    
+    -- If there is no previous level (e.g. level 0 or 1), use 0 for bonuses.
+    IF previous_level_info IS NULL THEN
+        previous_level_info := (user_record.level, 0, 0, 0, 0);
     END IF;
 
     -- Check if user has enough farmed total and is at the correct previous level
     IF user_record.total_farmed >= level_info.requiredFarmed AND user_record.level = p_new_level - 1 THEN
-        -- Update user stats for the new level
+        
+        -- Calculate the increase in stats
+        per_tap_increase := level_info.perTapBonus - previous_level_info.perTapBonus;
+        max_energy_increase := level_info.maxEnergyBonus - previous_level_info.maxEnergyBonus;
+        energy_regen_increase := level_info.energyRegenBonus - previous_level_info.energyRegenBonus;
+
+        -- Update user stats for the new level, applying bonuses incrementally
         UPDATE users
         SET 
             level = p_new_level,
-            per_tap = level_info.perTapBonus,
-            max_energy = level_info.maxEnergyBonus,
-            energy_regen_rate = level_info.energyRegenBonus,
-            energy = level_info.maxEnergyBonus, -- Refill energy
+            per_tap = users.per_tap + per_tap_increase,
+            max_energy = users.max_energy + max_energy_increase,
+            energy_regen_rate = users.energy_regen_rate + energy_regen_increase,
+            energy = users.max_energy + max_energy_increase, -- Refill energy to the new max
             updated_at = NOW()
         WHERE user_id = p_user_id;
 
+        -- Get the fully updated user data to return
+        SELECT get_user_data(p_user_id) INTO updated_user_data;
+
         RETURN json_build_object(
             'success', true,
-            'data', json_build_object(
-                'level', p_new_level,
-                'per_tap', user_record.per_tap + (level_info.perTapBonus - (
-                    SELECT l.perTapBonus 
-                    FROM unnest(levels) l 
-                    WHERE l.level = p_new_level - 1
-                )),
-                'max_energy', level_info.maxEnergyBonus,
-                'energy', level_info.maxEnergyBonus
-            )
+            'data', updated_user_data
         );
     ELSE
         RETURN json_build_object(
@@ -1199,7 +1199,7 @@ BEGIN
         );
     END IF;
 END;
-$;
+$function$;
 
 
 ALTER FUNCTION public.level_up_user(p_user_id bigint, p_new_level integer) OWNER TO postgres;
@@ -1210,7 +1210,7 @@ ALTER FUNCTION public.level_up_user(p_user_id bigint, p_new_level integer) OWNER
 
 CREATE FUNCTION public.process_tap(p_user_id bigint, p_tap_count integer, p_spud_amount integer) RETURNS json
     LANGUAGE plpgsql
-    AS $$DECLARE
+    AS $DECLARE
     user_record RECORD;
     v_current_timestamp BIGINT;  -- Prefixed with v_ to clearly indicate it's a variable
     time_diff BIGINT;
@@ -1306,7 +1306,7 @@ BEGIN
         'time_to_full', (user_record.max_energy - new_energy) * 10000 / user_record.energy_regen_rate,
         'debug', debug_info
     );
-END;$$;
+END;$;
 
 
 ALTER FUNCTION public.process_tap(p_user_id bigint, p_tap_count integer, p_spud_amount integer) OWNER TO postgres;
@@ -1317,7 +1317,7 @@ ALTER FUNCTION public.process_tap(p_user_id bigint, p_tap_count integer, p_spud_
 
 CREATE FUNCTION public.process_user_tap(p_user_id bigint, p_tap_count integer, p_spud_amount numeric, p_timestamp bigint) RETURNS json
     LANGUAGE plpgsql
-    AS $$
+    AS $
 DECLARE
     v_user_data record;
     v_energy_cost INTEGER := 1;
@@ -1366,7 +1366,7 @@ BEGIN
         'energy_regen_rate', v_user_data.energy_regen_rate
     );
 END;
-$$;
+$;
 
 
 ALTER FUNCTION public.process_user_tap(p_user_id bigint, p_tap_count integer, p_spud_amount numeric, p_timestamp bigint) OWNER TO postgres;
@@ -1375,9 +1375,10 @@ ALTER FUNCTION public.process_user_tap(p_user_id bigint, p_tap_count integer, p_
 -- Name: purchase_upgrade(bigint, text); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.purchase_upgrade(p_user_id bigint, p_upgrade_name text) RETURNS json
-    LANGUAGE plpgsql
-    AS $$
+CREATE OR REPLACE FUNCTION public.purchase_upgrade(p_user_id bigint, p_upgrade_name text)
+RETURNS json
+LANGUAGE plpgsql
+AS $function$
 DECLARE
     user_record RECORD;
     upgrade_record RECORD;
@@ -1385,10 +1386,10 @@ DECLARE
     current_level INTEGER;
     cost BIGINT;
     new_level INTEGER;
-    new_value REAL;
+    updated_user_data JSON;
 BEGIN
     -- Get user, upgrade, and user_upgrade info
-    SELECT * INTO user_record FROM users WHERE user_id = p_user_id;
+    SELECT * INTO user_record FROM users WHERE user_id = p_user_id FOR UPDATE;
     SELECT * INTO upgrade_record FROM upgrades WHERE name = p_upgrade_name;
     SELECT * INTO user_upgrade_record FROM user_upgrades WHERE user_id = p_user_id AND upgrade_id = upgrade_record.id;
 
@@ -1396,23 +1397,15 @@ BEGIN
         RETURN json_build_object('success', false, 'error', 'invalid_data');
     END IF;
 
-    -- Determine current level
-    IF user_upgrade_record IS NULL THEN
-        current_level := 0;
-    ELSE
-        current_level := user_upgrade_record.level;
-    END IF;
+    current_level := COALESCE(user_upgrade_record.level, 0);
 
-    -- Check max level
     IF current_level >= upgrade_record.max_level THEN
         RETURN json_build_object('success', false, 'error', 'max_level_reached');
     END IF;
 
-    -- Calculate cost for next level
     new_level := current_level + 1;
     cost := get_upgrade_cost(p_upgrade_name, current_level);
 
-    -- Check if user has enough balance
     IF user_record.balance < cost THEN
         RETURN json_build_object('success', false, 'error', 'insufficient_balance', 'required', cost);
     END IF;
@@ -1430,24 +1423,22 @@ BEGIN
 
     -- Update user stats based on upgrade type
     IF p_upgrade_name = 'per_tap' THEN
-        -- Increment per_tap instead of replacing it
-        UPDATE users SET per_tap = per_tap + upgrade_record.value_multiplier WHERE user_id = p_user_id;
+        UPDATE users SET per_tap = per_tap + upgrade_record.base_value WHERE user_id = p_user_id;
     ELSIF p_upgrade_name = 'max_energy' THEN
-        -- Increment max_energy by a fixed amount per upgrade level
-        UPDATE users SET max_energy = max_energy + 25 WHERE user_id = p_user_id;
+        UPDATE users SET max_energy = max_energy + upgrade_record.base_value WHERE user_id = p_user_id;
     ELSIF p_upgrade_name = 'energy_regen_rate' THEN
-        -- Increment energy_regen_rate instead of replacing it
-        UPDATE users SET energy_regen_rate = energy_regen_rate + upgrade_record.value_multiplier WHERE user_id = p_user_id;
+        UPDATE users SET energy_regen_rate = energy_regen_rate + upgrade_record.base_value WHERE user_id = p_user_id;
     END IF;
+
+    -- Get the fully updated user data to return
+    SELECT get_user_data(p_user_id) INTO updated_user_data;
 
     RETURN json_build_object(
         'success', true,
-        'new_level', new_level,
-        'cost', cost,
-        'new_balance', user_record.balance - cost
+        'data', updated_user_data
     );
 END;
-$$;
+$function$;
 
 
 ALTER FUNCTION public.purchase_upgrade(p_user_id bigint, p_upgrade_name text) OWNER TO postgres;
