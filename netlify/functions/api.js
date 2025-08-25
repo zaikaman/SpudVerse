@@ -112,7 +112,7 @@ app.post('/api/tap', async (req, res) => {
     }
 });
 
-app.post('/api/achievements/all', async (req, res) => {
+app.get('/api/achievements/all', async (req, res) => {
     try {
         const achievements = await db.getAchievements();
         res.json({ success: true, data: achievements });

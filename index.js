@@ -1004,6 +1004,17 @@ app.get('/api/achievements', async (req, res) => {
     }
 });
 
+// API endpoint to get all achievements
+app.get('/api/achievements/all', async (req, res) => {
+    try {
+        const achievements = await db.getAchievements();
+        res.json({ success: true, data: achievements });
+    } catch (error) {
+        console.error('Achievements API Error:', error);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+});
+
 // API endpoint to get current energy
 app.get('/api/energy', async (req, res) => {
     try {
