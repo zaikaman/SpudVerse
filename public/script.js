@@ -660,69 +660,85 @@ class SpudVerse {
     }
 
     startEnergyRegen() {
-        // Start local real-time countdown (100ms)
+        // Clear any existing timers first
+        this.stopEnergyRegen();
+        
+        // Start local UI updates (100ms)
         this.startLocalEnergyTimer();
         
         // Start backend sync (10 seconds)
         this.startBackendEnergySync();
+        
+        console.log('🔋 Energy regeneration system started');
     }
 
     startLocalEnergyTimer() {
-        // Update countdown every 100ms for smooth real-time experience
+        // Only update UI and time to full locally
         this.localRegenTimer = setInterval(() => {
             if (this.gameData.energy < this.gameData.maxEnergy) {
-                // Calculate time since last energy update
                 const now = Date.now();
                 const timePassed = now - this.lastEnergyUpdate;
                 
-                // Check if we should regenerate energy (every 10 seconds)
-                if (timePassed >= 10000) {
-                    const energyToAdd = Math.floor(timePassed / 10000) * this.gameData.energyRegenRate;
-                    if (energyToAdd > 0) {
-                        this.gameData.energy = Math.min(this.gameData.energy + energyToAdd, this.gameData.maxEnergy);
-                        this.lastEnergyUpdate = now - (timePassed % 10000); // Keep remainder
-                    }
-                }
-                
-                // Update time to full for display
+                // Calculate time to full
                 if (this.gameData.energy < this.gameData.maxEnergy) {
                     const energyNeeded = this.gameData.maxEnergy - this.gameData.energy;
-                    const timeToNextEnergy = 10000 - (now - this.lastEnergyUpdate);
+                    const timeToNextEnergy = 10000 - (timePassed % 10000);
                     this.gameData.timeToFull = (energyNeeded - 1) * 10000 + timeToNextEnergy;
                 } else {
                     this.gameData.timeToFull = 0;
                 }
                 
+                // Only update UI, let backend handle actual energy regeneration
                 this.updateEnergyBar();
             }
-        }, 100); // Update every 100ms for smooth countdown
+        }, 100); // Update UI every 100ms for smooth countdown
+        
+        console.log('⚡ Local energy UI updates started');
     }
 
     startBackendEnergySync() {
-        // Only start energy sync if user data was successfully loaded
-        // This prevents /api/energy from creating users before welcome modal
-        if (this.gameData.balance !== undefined && this.gameData.balance >= 0) {
-            console.log('🔄 Starting backend energy sync for existing user');
-            
-            // Sync with backend every 10 seconds for accuracy
-            this.energyRegenInterval = setInterval(async () => {
-                try {
-                    const response = await this.apiCall('/api/energy', 'GET');
-                    if (response && response.success) {
-                        // Update game data with server values
-                        this.gameData.energy = response.data.current_energy;
-                        this.gameData.maxEnergy = response.data.max_energy;
-                        this.gameData.energyRegenRate = response.data.energy_regen_rate;
-                        this.lastEnergyUpdate = Date.now(); // Reset local timer
-                        
-                        console.log('🔄 Energy synced with backend:', this.gameData.energy);
-                    }
-                } catch (error) {
-                    console.warn('⚠️ Backend energy sync failed, using local calculation');
-                }
-            }, 10000); // 10 seconds
-        } else {
+        if (this.gameData.balance === undefined || this.gameData.balance < 0) {
             console.log('⏸️ Skipping backend energy sync - user not loaded yet');
+            return;
+        }
+
+        console.log('🔄 Starting backend energy sync for existing user');
+        
+        // Clear any existing sync interval
+        if (this.energyRegenInterval) {
+            clearInterval(this.energyRegenInterval);
+        }
+        
+        // Initial sync
+        this.syncEnergyWithBackend();
+        
+        // Then sync every 10 seconds
+        this.energyRegenInterval = setInterval(() => this.syncEnergyWithBackend(), 10000);
+    }
+    
+    async syncEnergyWithBackend() {
+        try {
+            const response = await this.apiCall('/api/energy', 'GET');
+            if (response && response.success) {
+                // Log energy state before update
+                console.log('🔄 Energy sync:', {
+                    previous: this.gameData.energy,
+                    new: response.data.current_energy,
+                    diff: response.data.current_energy - this.gameData.energy,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Only update if there's a significant difference
+                if (Math.abs(this.gameData.energy - response.data.current_energy) > 1) {
+                    this.gameData.energy = response.data.current_energy;
+                    this.gameData.maxEnergy = response.data.max_energy;
+                    this.gameData.energyRegenRate = response.data.energy_regen_rate;
+                    this.lastEnergyUpdate = Date.now();
+                    this.updateEnergyBar();
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Backend energy sync failed:', error);
         }
     }
 
