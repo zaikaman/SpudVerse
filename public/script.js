@@ -2337,8 +2337,7 @@ class SpudVerse {
 
             // Xử lý case 404 cho endpoint /api/user
             if (response.status === 404 && endpoint === '/api/user') {
-                console.log('[DEBUG] New user detected (404), showing welcome modal...');
-                await this.showWelcomeModal();
+                console.log('[DEBUG] New user detected (404), returning null to be handled by loadUserData.');
                 return null;
             }
 
