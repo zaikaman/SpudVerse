@@ -1370,16 +1370,22 @@ class SpudVerse {
             // Reset shop items first
             this.shopItems = [];
                     // Load shop items from API
-                    const response = await this.apiCall('/api/shop', 'GET');
+                    // First, load all shop items
+                    const shopResponse = await this.apiCall('/api/shop', 'GET');
+                    
+                    // Then, ensure we get the latest user items data
+                    const userDataResponse = await this.apiCall('/api/user', 'GET');
             
-                    if (response && response.success) {
-                        this.shopItems = response.data; // Store all items
+                    if (shopResponse && shopResponse.success && userDataResponse && userDataResponse.success) {
+                        this.shopItems = shopResponse.data; // Store all items
+                        this.gameData.items = userDataResponse.data.items || []; // Update user items
                         
                         if (!Array.isArray(this.shopItems)) {
                             throw new Error(`Shop API returned invalid data for shopItems. Expected array, got: ${JSON.stringify(this.shopItems)}`);
                         }
 
                         console.log('Loaded shop items:', this.shopItems);
+                        console.log('User owned items:', this.gameData.items);
                         container.innerHTML = '';
                 
                         const itemsInCategory = this.shopItems.filter(item => item.category === category);
@@ -1390,15 +1396,24 @@ class SpudVerse {
                         }
 
                         itemsInCategory.forEach(item => {
-                            // Defensive check to ensure gameData.items is always an array
+                            // Ensure items array is valid and get owned count
                             const userItems = Array.isArray(this.gameData.items) ? this.gameData.items : [];
                             const ownedItem = userItems.find(i => i.id === item.id);
                             const count = ownedItem ? ownedItem.count : 0;
+                            
+                            // Calculate current cost based on ownership count
                             const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
                             const canAfford = this.gameData.balance >= currentCost;
 
                             const itemCard = document.createElement('div');
                             itemCard.className = 'item-card';
+                            
+                            // Calculate ownership status and button text
+                            const ownershipText = count > 0 ? `Owned: ${count}` : 'Not owned';
+                            const buttonText = count > 0 
+                                ? `Buy for ${this.formatNumber(currentCost)}` 
+                                : `Buy for ${this.formatNumber(item.cost)}`;
+                            
                             itemCard.innerHTML = `
                                 <div class="item-icon">${item.icon}</div>
                                 <div class="item-info">
@@ -1406,11 +1421,11 @@ class SpudVerse {
                                     <div class="item-profit">+${this.formatNumber(item.profit)} SPH</div>
                                 </div>
                                 <div class="item-action">
-                                    <div class="item-count">Owned: ${count}</div>
+                                    <div class="item-count">${ownershipText}</div>
                                     <button class="buy-item-btn" 
                                             onclick="spudverse.buyShopItem(${item.id})"
                                             ${!canAfford ? 'disabled' : ''}>
-                                        Buy for ${this.formatNumber(currentCost)}
+                                        ${buttonText}
                                     </button>
                                 </div>
                             `;
@@ -1431,80 +1446,54 @@ class SpudVerse {
     }
 
     async buyShopItem(itemId) {
-        // Kiểm tra và tải lại dữ liệu shop nếu cần
-        if (!Array.isArray(this.shopItems) || this.shopItems.length === 0) {
-            this.showToast("Đang tải lại dữ liệu cửa hàng...", "info");
-            const activeCategoryBtn = document.querySelector('.item-shop-nav-btn.active');
-            if (activeCategoryBtn) {
-                await this.loadShopItems();
-            } else {
-                this.showToast("Lỗi: Không thể xác định danh mục cửa hàng", "error");
+        try {
+            // Get fresh shop and user data before purchase
+            await this.loadShopItems();
+            
+            const item = this.shopItems.find(i => i.id === itemId);
+            if (!item) {
+                this.showToast("Item not found in shop", "error");
                 return;
             }
-        }
 
-        // Kiểm tra lại sau khi tải
-        if (!Array.isArray(this.shopItems) || this.shopItems.length === 0) {
-            this.showToast("Lỗi: Không thể tải dữ liệu cửa hàng. Vui lòng thử lại", "error");
-            console.error("buyShopItem failed: Shop items not available after reload", this.shopItems);
-            return;
-        }
+            // Calculate current cost based on ownership
+            const ownedItem = Array.isArray(this.gameData.items) 
+                ? this.gameData.items.find(i => i.id === item.id) 
+                : null;
+            const count = ownedItem ? ownedItem.count : 0;
+            const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
 
-        const item = this.shopItems.find(i => i.id === itemId);
-        if (!item) {
-            this.showToast("Không tìm thấy vật phẩm trong cửa hàng", "error");
-            return;
-        }
+            if (this.gameData.balance < currentCost) {
+                this.showToast("You don't have enough SPUD Points!", "error");
+                return;
+            }
 
-        const ownedItem = Array.isArray(this.gameData.items) 
-            ? this.gameData.items.find(i => i.id === item.id) 
-            : null;
-        const count = ownedItem ? ownedItem.count : 0;
-        const currentCost = Math.floor(item.cost * Math.pow(item.scaling, count));
-
-        if (this.gameData.balance < currentCost) {
-            this.showToast("You don't have enough SPUD Points!", "error");
-            return;
-        }
-
-        try {
             const response = await this.apiCall('/api/shop/buy', 'POST', { itemId });
 
             if (response && response.success) {
-                // Update balance and SPH from server response
-                // Handle potential inconsistencies in response keys
-                this.gameData.balance = response.data.balance ?? response.data.newBalance ?? this.gameData.balance;
-                this.gameData.sph = response.data.sph ?? response.data.newSPH ?? this.gameData.sph;
-
-                // --- Client-side item state management ---
-                // Ensure gameData.items is a valid array
-                if (!Array.isArray(this.gameData.items)) {
-                    this.gameData.items = [];
-                }
-
-                // Find the item in the local state
-                const ownedItem = this.gameData.items.find(i => i.id === itemId);
-
-                if (ownedItem) {
-                    // If item exists, increment its count
-                    ownedItem.count++;
+                // Get fresh data from server after purchase
+                const userResponse = await this.apiCall('/api/user', 'GET');
+                
+                if (userResponse && userResponse.success) {
+                    // Update all user data including items
+                    this.gameData.balance = userResponse.data.balance;
+                    this.gameData.sph = userResponse.data.sph;
+                    this.gameData.items = userResponse.data.items || [];
+                    
+                    this.updateUI();
+                    await this.loadShopItems(); // Reload shop with updated ownership data
+                    this.showToast(`Purchased ${item.name}!`, 'success');
                 } else {
-                    // If item doesn't exist, add it to the array
-                    this.gameData.items.push({ id: itemId, count: 1 });
+                    console.error('Failed to refresh user data after purchase:', userResponse?.error);
+                    this.showToast('Purchase successful but failed to refresh data', 'warning');
                 }
-                // --- End of client-side management ---
-
-                this.updateUI();
-                this.loadShopItems();
-                this.showToast(`Purchased ${item.name}!`, 'success');
             } else {
-                const debugMsg = `Buy API error: ${response?.error || 'Unknown'} | Raw: ${JSON.stringify(response)}`;
-                this.showToast(debugMsg, 'error');
+                console.error('Buy API error:', response?.error);
+                this.showToast(response?.error || 'Failed to purchase item', 'error');
             }
         } catch (error) {
             console.error('Error buying item:', error);
-            const debugMsg = `JS error during purchase: ${error?.message || error}`;
-            this.showToast(debugMsg, 'error');
+            this.showToast('Error occurred during purchase', 'error');
         }
     }
 
