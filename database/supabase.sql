@@ -855,4 +855,3 @@ BEGIN
     RETURN json_build_object('success', true, 'balance', new_balance, 'earnings', sph_earnings);
 END;
 $$ LANGUAGE plpgsql;
-
