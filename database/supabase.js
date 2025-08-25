@@ -540,6 +540,11 @@ class SupabaseDatabase {
                     const unlocked = await this.unlockAchievement(userId, achievement.id);
                     if (unlocked) {
                         newlyUnlocked.push(unlocked);
+                        // Award the achievement reward to the user
+                        if (unlocked.achievements && unlocked.achievements.reward > 0) {
+                            console.log(`🏆 Awarding ${unlocked.achievements.reward} SPUD for achievement: ${unlocked.achievements.title}`);
+                            await this.updateUserBalance(userId, unlocked.achievements.reward);
+                        }
                     }
                 }
             }
