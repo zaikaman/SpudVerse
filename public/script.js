@@ -140,6 +140,7 @@ class SpudVerse {
                     this.setupEventListeners();
                     this.startEnergyRegen();
                     this.startSPHInterval();
+                    this.startSPHUIInterval();
                     this.updateUI();
                     this.hideLoading();
                     this.setupGlobalErrorHandlers();
@@ -1523,6 +1524,16 @@ class SpudVerse {
                 console.warn('Could not sync balance for SPH update.', error);
             }
         }, 60000); // Sync every 60 seconds
+    }
+
+    startSPHUIInterval() {
+        setInterval(() => {
+            if (this.gameData.sph > 0) {
+                const sphPerSecond = this.gameData.sph / 3600;
+                this.gameData.balance += sphPerSecond;
+                this.updateBalance();
+            }
+        }, 1000);
     }
 
     async loadUpgrades() {
