@@ -1926,7 +1926,6 @@ class SpudVerse {
             }
         } catch (error) {
             console.error('❌ Error creating user account:', error);
-            this.showToast('❌ Network error. Using offline mode.', 'error');
             this.useMockData();
         }
     }
