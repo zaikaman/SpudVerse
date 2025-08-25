@@ -1007,8 +1007,22 @@ app.get('/api/achievements', async (req, res) => {
 // API endpoint to get all achievements
 app.get('/api/achievements/all', async (req, res) => {
     try {
-        const achievements = await db.getAchievements();
-        res.json({ success: true, data: achievements });
+        const userId = getUserIdFromRequest(req);
+
+        const [achievements, userAchievements] = await Promise.all([
+            db.getAchievements(),
+            userId ? db.getUserAchievements(userId) : Promise.resolve([])
+        ]);
+
+        const unlockedIds = userAchievements.map(ua => ua.achievement_id);
+
+        const achievementData = achievements.map(achievement => ({
+            ...achievement,
+            unlocked: unlockedIds.includes(achievement.id),
+            unlocked_at: userAchievements.find(ua => ua.achievement_id === achievement.id)?.unlocked_at
+        }));
+
+        res.json({ success: true, data: achievementData });
     } catch (error) {
         console.error('Achievements API Error:', error);
         res.status(500).json({ success: false, error: 'Internal server error' });
