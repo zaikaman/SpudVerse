@@ -1755,67 +1755,17 @@ class SpudVerse {
         }
     }
 
-    async showAchievements() {
-        const modal = document.getElementById('achievements-list-modal');
-        const container = document.getElementById('achievements-list-container');
-        
-        // Show a loading state
-        container.innerHTML = '<div class="potato-loading"><div class="potato-spinner"></div></div>';
+    showAchievements() {
+        // Show achievement modal with mock data
+        const modal = document.getElementById('achievement-modal');
         modal.style.display = 'block';
-
-        try {
-            const response = await this.apiCall('/api/achievements', 'GET');
-            
-            if (response && response.success) {
-                const achievements = response.data;
-                container.innerHTML = ''; // Clear loading spinner
-
-                if (achievements.length === 0) {
-                    container.innerHTML = '<p class="no-items">No achievements available yet.</p>';
-                    return;
-                }
-
-                // Sort achievements: unlocked first, then by reward
-                achievements.sort((a, b) => {
-                    if (a.unlocked && !b.unlocked) return -1;
-                    if (!a.unlocked && b.unlocked) return 1;
-                    return b.reward - a.reward; // Higher reward first
-                });
-
-                achievements.forEach(ach => {
-                    const achievementCard = document.createElement('div');
-                    achievementCard.className = `achievement-list-item ${ach.unlocked ? 'unlocked' : 'locked'}`;
-                    
-                    achievementCard.innerHTML = `
-                        <div class="achievement-icon">${ach.icon || '🏆'}</div>
-                        <div class="achievement-details">
-                            <div class="achievement-title">${ach.name}</div>
-                            <div class="achievement-desc">${ach.description}</div>
-                            <div class="achievement-reward">+${this.formatNumber(ach.reward)} SPUD</div>
-                        </div>
-                        <div class="achievement-status">
-                            ${ach.unlocked ? '<span>✅ Unlocked</span>' : '<span>🔒 Locked</span>'}
-                        </div>
-                    `;
-                    container.appendChild(achievementCard);
-                });
-            } else {
-                container.innerHTML = '<p class="error-message">Could not load achievements. Please try again.</p>';
-            }
-        } catch (error) {
-            console.error('Failed to load achievements:', error);
-            container.innerHTML = '<p class="error-message">An error occurred while loading achievements.</p>';
-        }
-
+        
         // Add click outside to close
         modal.addEventListener('click', (e) => {
             if (e.target === modal) {
                 this.closeModal();
             }
         });
-
-        // Make sure the close button inside the new modal works
-        modal.querySelector('.modal-close').addEventListener('click', () => this.closeModal());
     }
 
     async showWelcomeModal() {
@@ -2020,9 +1970,6 @@ class SpudVerse {
     closeModal() {
         document.querySelectorAll('.modal').forEach(modal => {
             modal.style.display = 'none';
-            if (modal.id === 'achievements-list-modal') {
-                modal.classList.remove('achievements-modal');
-            }
         });
     }
 
