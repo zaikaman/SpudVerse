@@ -333,6 +333,7 @@ app.get('/api/user', async (req, res) => {
                 referrals: referralCount,
                 streak: user?.streak || 0,
                 bestStreak: user?.best_streak || 0,
+                sph: user?.sph || 0,
                 items: userItems.map(item => ({ id: item.item_id, count: item.count }))
             }
         });
@@ -1830,8 +1831,8 @@ app.post('/api/shop/buy', async (req, res) => {
             data: {
                 item: item,
                 newBalance: updatedUser.balance,
-                newSPH: result.new_sph,
-                newCount: result.new_count,
+                new_sph: result.new_sph,
+                new_count: result.new_count,
                 energy: energyData.current_energy,
                 maxEnergy: energyData.max_energy,
                 message: `Successfully purchased ${item.name}!`
