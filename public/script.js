@@ -1475,7 +1475,7 @@ class SpudVerse {
                 // Update balance and SPH from server response
                 // Handle potential inconsistencies in response keys
                 this.gameData.balance = response.data.balance ?? response.data.newBalance ?? this.gameData.balance;
-                this.gameData.sph = response.data.sph ?? response.data.newSPH ?? this.gameData.sph;
+                this.gameData.sph = response.data.sph ?? response.data.new_sph ?? this.gameData.sph;
 
                 // --- Client-side item state management ---
                 // Ensure gameData.items is a valid array
