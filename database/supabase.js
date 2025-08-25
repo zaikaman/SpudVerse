@@ -31,12 +31,15 @@ class SupabaseDatabase {
         try {
             console.log(`[DEBUG] process_tap - User ID: ${userId}, Tap Count: ${tapCount}, SPUD Amount: ${spudAmount}`);
             
+            // Convert to Unix timestamp (milliseconds)
+            const currentTimestamp = Date.now();
+            
             const { data, error } = await this.client
                 .from('users')
                 .update({
                     balance: spudAmount,
                     total_farmed: spudAmount,
-                    last_tap_time: new Date().toISOString()
+                    last_tap_time: currentTimestamp
                 })
                 .eq('user_id', userId)
                 .select()
