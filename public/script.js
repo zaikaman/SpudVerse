@@ -1952,6 +1952,15 @@ class SpudVerse {
             }
             
             document.body.appendChild(overlay);
+
+            // Auto-fill referral code if it exists
+            if (this.referrerId) {
+                const referralInput = document.getElementById('referral-code-input');
+                if (referralInput) {
+                    referralInput.value = this.referrerId;
+                    console.log(`📝 Automatically filled referral code: ${this.referrerId}`);
+                }
+            }
             
             // Set up event handlers
             const input = document.getElementById('referral-code-input');
