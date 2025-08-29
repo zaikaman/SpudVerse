@@ -1781,8 +1781,8 @@ class SpudVerse {
 
     shareReferralLink() {
         const userId = this.user?.id || 12345;
-        const referralLink = `https://t.me/spudverse_bot?start=${userId}`;
-        const shareText = `🥔 Join me in SpudVerse! 🌱\n\nTap potatoes, earn SPUD Points, and become a farming legend!\n\nStart farming now! 🚀\n${referralLink}`;
+        const botLink = `https://t.me/spudverse_bot`;
+        const shareText = `🥔 Join me in SpudVerse! 🌱\n\nTap potatoes, earn SPUD Points, and become a farming legend!\n\nStart farming now! 🚀\n${botLink}\n\nWhen joining, please enter my referral code: ${userId}`;
 
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(shareText).then(() => {
